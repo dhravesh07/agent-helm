@@ -3,12 +3,44 @@ import SwiftUI
 struct FileBrowserView: View {
     @Bindable var session: SessionState
     @State private var highlightedId: RemoteFileEntry.ID?
+    @State private var autoRefresh: Bool = false
+    @State private var pollTask: Task<Void, Never>?
+
+    private static let pollInterval: Duration = .seconds(5)
 
     var body: some View {
         VStack(spacing: 0) {
             header
             Divider()
             content
+        }
+        .onChange(of: autoRefresh) { _, newValue in
+            pollTask?.cancel()
+            if newValue {
+                pollTask = Task { await runPollLoop() }
+            }
+        }
+        .onChange(of: session.rootPath) { _, _ in
+            // Restart the loop on path change so the next refresh reflects the
+            // new directory immediately.
+            if autoRefresh {
+                pollTask?.cancel()
+                pollTask = Task { await runPollLoop() }
+            }
+        }
+        .onDisappear {
+            pollTask?.cancel()
+            pollTask = nil
+        }
+    }
+
+    private func runPollLoop() async {
+        while !Task.isCancelled {
+            try? await Task.sleep(for: Self.pollInterval)
+            if Task.isCancelled { return }
+            if case .connected = session.status {
+                await session.refresh()
+            }
         }
     }
 
@@ -34,13 +66,21 @@ struct FileBrowserView: View {
                     .truncationMode(.middle)
                     .frame(maxWidth: .infinity, alignment: .leading)
 
+                Toggle(isOn: $autoRefresh) {
+                    Image(systemName: autoRefresh ? "wave.3.right.circle.fill" : "wave.3.right.circle")
+                }
+                .toggleStyle(.button)
+                .controlSize(.small)
+                .disabled(session.status != .connected)
+                .help(autoRefresh ? "Auto-refresh on (every 5s)" : "Auto-refresh off")
+
                 Button {
                     Task { await session.refresh() }
                 } label: {
                     Image(systemName: "arrow.clockwise")
                 }
                 .disabled(session.status != .connected)
-                .help("Refresh")
+                .help("Refresh once")
             }
             .padding(8)
         }

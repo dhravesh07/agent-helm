@@ -28,6 +28,11 @@ final class SessionState {
     var saveStatus: SaveStatus = .idle
     var lastError: String?
 
+    /// Captured at file-open for conflict detection on save. nil for non-text
+    /// files. Compared against fresh stat + sha at save time.
+    var openBaseline: EditLockBaseline?
+    var pendingConflict: SaveConflict?
+
     var isDirty: Bool {
         guard case .text(let original) = bufferState else { return false }
         return editText != original
@@ -190,6 +195,11 @@ final class SessionState {
                     bufferState = .text(original: text)
                     editText = text
                     saveStatus = .idle
+                    openBaseline = EditLockBaseline.make(
+                        path: entry.path,
+                        contents: data,
+                        meta: meta
+                    )
                 } else {
                     bufferState = .binary(size: meta.size)
                 }
@@ -256,16 +266,52 @@ final class SessionState {
 
     // MARK: - File save
 
-    func save() async {
+    func save(force: Bool = false) async {
         guard case .text(let original) = bufferState, editText != original else { return }
         guard let entry = selectedFile else { return }
 
         saveStatus = .saving
         do {
+            // Conflict detection: re-read the remote file and compare to the
+            // baseline captured at open time. Skipped if the user has opted to
+            // force-overwrite via the conflict dialog, or if no baseline exists
+            // (which would happen for files we couldn't stat at open time).
+            if !force, let baseline = openBaseline {
+                let currentMeta = try await service.statFile(at: entry.path)
+                let currentBytes = try await service.readFile(
+                    at: entry.path,
+                    maxBytes: Int(Self.maxFileSize)
+                )
+                let currentHash = EditLockBaseline.make(
+                    path: entry.path,
+                    contents: currentBytes,
+                    meta: currentMeta
+                ).sha256
+                if currentHash != baseline.sha256 {
+                    pendingConflict = .remoteDrift(
+                        baseline: baseline,
+                        currentSize: currentMeta.size,
+                        currentMtime: currentMeta.mtime,
+                        currentSha256: currentHash
+                    )
+                    saveStatus = .idle
+                    return
+                }
+            }
+
             let data = Data(editText.utf8)
             try await service.writeFile(at: entry.path, contents: data)
             bufferState = .text(original: editText)
             saveStatus = .saved(at: Date())
+            // Refresh baseline so subsequent saves compare against the just-saved version.
+            if let meta = try? await service.statFile(at: entry.path) {
+                openBaseline = EditLockBaseline.make(
+                    path: entry.path,
+                    contents: data,
+                    meta: meta
+                )
+            }
+            pendingConflict = nil
             if case .connected = status {
                 if let updated = try? await service.listDirectory(at: rootPath) {
                     entries = updated
@@ -281,6 +327,24 @@ final class SessionState {
         if case .text(let original) = bufferState {
             editText = original
             saveStatus = .idle
+            pendingConflict = nil
+        }
+    }
+
+    /// Resolve a save conflict by overwriting the remote — the user
+    /// accepts that whatever the agent wrote is being clobbered.
+    func resolveConflictByOverwriting() async {
+        pendingConflict = nil
+        await save(force: true)
+    }
+
+    /// Resolve a save conflict by reloading the remote — the user
+    /// abandons the in-memory edit and starts again from the current
+    /// remote state.
+    func resolveConflictByReloading() async {
+        pendingConflict = nil
+        if let entry = selectedFile {
+            await openFile(entry)
         }
     }
 
@@ -352,5 +416,7 @@ final class SessionState {
         bufferState = .empty
         editText = ""
         saveStatus = .idle
+        openBaseline = nil
+        pendingConflict = nil
     }
 }

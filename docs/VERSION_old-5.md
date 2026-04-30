@@ -1,46 +1,53 @@
 # Agent Helm — Version
 
-**Current:** `0.0.6` (read & edit any text file; markdown Preview/Source toggle)
+**Current:** `0.0.7` (real markdown rendering + image/PDF/JSON preview)
 
 ## Changelog
 
+### 0.0.7 — 2026-04-30
+**Fix the markdown preview + broaden file-type support.**
+
+The 0.0.6 markdown preview was using `AttributedString(markdown:)` with `interpretedSyntax: .inlineOnlyPreservingWhitespace`, which only handled inline syntax (bold/italic/links/code spans). Block-level structure (headings, code blocks, lists, tables) collapsed into a single line — clearly broken when previewing TESTING.md.
+
+**Replaced with [MarkdownUI 2.4.1](https://github.com/gonzalezreal/swift-markdown-ui)** (added as SwiftPM dependency, GitHub theme). Real block-level rendering: headings sized correctly, code blocks preserve indentation and use monospaced font, lists nest, tables render as tables, block quotes indent, links are clickable. Live preview against the in-memory edit buffer is unchanged.
+
+**New per-file-kind dispatch** — `PreviewableFileKind` enum (`markdown / json / image / pdf / sourceText`) maps the file extension to the right preview/editor:
+
+| Kind | Extensions | Preview | Source | Editable |
+|---|---|---|---|---|
+| Markdown | `.md`, `.markdown`, `.mdown`, `.mkd` | MarkdownUI render | Plain TextEditor | Yes |
+| JSON | `.json` | Pretty-printed (sorted keys, 2-space indent) | Raw TextEditor | Yes |
+| Image | `.png`, `.jpg`/`.jpeg`, `.gif`, `.heic`/`.heif`, `.tiff`, `.bmp`, `.webp`, `.ico`, `.icns` | `NSImage` scaled-to-fit | n/a | No |
+| PDF | `.pdf` | PDFKit `PDFView` continuous-vertical | n/a | No |
+| Source text | everything else UTF-8 | n/a | Monospaced TextEditor | Yes |
+
+Images and PDFs hit the preview-only path: bytes loaded into `FileBufferState.image(data:)` / `.pdf(data:)`, no UTF-8 decode attempted. Save / Discard buttons hide for non-editable kinds. The Preview/Source segmented toggle only appears when both modes meaningfully differ (markdown, JSON).
+
+**State changes:**
+- `FileBufferState` adds `.image(data: Data)` and `.pdf(data: Data)` cases.
+- `RemoteFileEntry` gains `previewableKind` extension via the new `PreviewableFileKind` enum.
+- `SessionState.openFile` dispatches on `previewableKind` after the size check.
+
+**New views:**
+- `MarkdownPreviewView` — wraps MarkdownUI's `Markdown` with a scroll view and the GitHub theme.
+- `JSONPreviewView` — uses `JSONSerialization` to pretty-print with sorted keys; falls back to raw text if not valid JSON.
+- `ImagePreviewView` — `Image(nsImage:)` in a scrollable container; placeholder if the image format isn't decodable.
+- `PDFPreviewView` — `NSViewRepresentable` wrapping `PDFView`.
+
 ### 0.0.6 — 2026-04-30
-**File reading & editing — full rewrite of the right pane.**
-- All UTF-8 text files are now editable, not just `.md`. Code, JSON, YAML, TOML, configs, plain text — anything decodable as UTF-8.
-- Markdown files get a **Preview / Source** segmented toggle. Default = Preview when opening a `.md`; switch to Source to edit. The preview renders the in-memory buffer, so toggling Preview after edits shows your changes immediately.
-- Source editor uses monospaced font for non-markdown text and proportional for `.md` source.
-- **Save** button + Cmd+S shortcut; **Discard** button reverts the buffer to the original. A "Modified" indicator appears in the header while the buffer is dirty.
-- Save-status line: shows "Saving…" → "Saved {time ago}" → or surfaces a save failure inline.
-- File size cap: 5 MB. Larger files surface as "too large to display" with size shown.
-- Binary files (anything that fails UTF-8 decode) surface as "Binary file — not shown" instead of garbage.
-
-**Service-layer additions:**
-- `RemoteFileService` protocol gains `statFile`, `readFile(at:maxBytes:) -> Data`, `writeFile(at:contents: Data)`. The text/binary decision moves to the caller (SessionState) instead of the service.
-- `LocalFileService` writes use `Data.write(to:options: .atomic)`.
-- `SSHService` writes use Citadel's `withFile(filePath:flags: [.write, .create, .truncate])` + `file.write(byteBuffer, at: 0)`.
-- New `RemoteFileMetadata` (size + optional mtime) used by the integrity baseline that lock-for-editing will plug into in v0.1.
-
-**State model:**
-- New `FileBufferState` enum (`.empty / .loading / .text(original:) / .binary(size:) / .tooLarge(size:) / .error(message:)`) replaces nilable strings.
-- New `FileViewMode` enum (`.preview / .source`).
-- New `SaveStatus` enum (`.idle / .saving / .saved(at:) / .failed(message:)`).
-- `SessionState.editText` holds the live edit buffer; `isDirty` is computed against the original.
-- Switching files while dirty is refused with a "save your changes" message — a confirmation dialog lands in v0.0.7.
+- Read & edit any UTF-8 text file. Markdown Preview/Source toggle. Save/Discard, Cmd+S, dirty indicator. (Markdown render quality fixed in 0.0.7.)
 
 ### 0.0.5 — 2026-04-30
-- Fix: local hosts auto-connect on selection (no more "Not connected" until manual click).
-- Docs corrections from architectural review: supervisor profiles, workspace paths, editing model, connection lifecycle, stop/uninstall/prune lifecycle.
+- Auto-connect on host selection. Architectural-review docs corrections.
 
 ### 0.0.4 — 2026-04-30
 - Local-Mac connection kind alongside remote SSH.
-- `RemoteFileService` protocol; `LocalFileService` actor backed by `FileManager`.
 
 ### 0.0.3 — 2026-04-30
-- First functional slice. SSH connect (OpenSSH ed25519 / RSA), SFTP file tree, markdown viewer.
+- First functional slice. SSH connect (ed25519 / RSA), SFTP file tree, markdown viewer.
 
 ### 0.0.2 — 2026-04-30
-- Add Xcode project generated from `src/project.yml` via xcodegen.
-- Add `AgentHelm.entitlements`, `Makefile`.
+- Xcode project via xcodegen, Makefile, entitlements.
 
 ### 0.0.1 — 2026-04-30
 - Initial scaffold.

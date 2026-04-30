@@ -6,7 +6,17 @@
 
 Local-first, with optional SSH for remote agents on Linux servers. Cross-vendor (Claude Code, Aider, OpenCode, OpenClaude, Continue, Cline). It's a **state inspector**, not a chat surface, not an SSH terminal, not an agent runner.
 
-**Status:** v0.2.0. SSH + local browsing, per-host workspaces, auto-connect, sleep/wake reconnect. Markdown / JSON Graph / XML / image / PDF preview. **SQLite inspector** with Tables / Schema / Query modes, paginated grid, read-only SQL runner. Line-numbered source editor with syntax highlighting for 11 languages (now including SQL). Save / Discard / Cmd+S. JSONL transcript viewer next. See [ROADMAP.md](docs/ROADMAP.md).
+**Status:** v0.5.0 — feature-complete for the inspector use case.
+
+- SSH + local browsing, per-host workspaces, auto-connect, sleep/wake reconnect, **auto-refresh polling toggle**.
+- Markdown render (MarkdownUI), **JSON: Graph (collapsible + edit-in-place) / Pretty / Source**, XML pretty-print, image + PDF preview.
+- **SQLite inspector** with Tables / Schema / Query modes, paginated grid, read-only SQL runner.
+- **JSONL transcript viewer** with one-row-per-message, role-colored badges, expand-to-detail, live search.
+- Line-numbered source editor with syntax highlighting for 11 languages.
+- Save / Discard / Cmd+S, **save-conflict detection** (size + mtime + SHA-256 baseline; alert with Reload / Overwrite if the remote drifted).
+- **Onboarding presets** for Claude Code / Aider / OpenCode / OpenClaude / Continue / Cline / Codex.
+
+What's left for v1.0 (all gated on external prereqs): DMG signing + notarization (paid Apple Dev account), App Sandbox re-enable + security-scoped bookmarks (signed builds), Keychain for encrypted SSH key passphrases (real encrypted keys to test). See [ROADMAP.md](docs/ROADMAP.md).
 
 > **Note:** Pre-v0.1 versions (0.0.1 through 0.0.10) shipped under the name "Agent Helm." The project was renamed to Rookery at v0.1.0 due to a name collision with [agenthelm.online](https://agenthelm.online) and a deliberate direction pivot from "control plane" to "state inspector." See [VERSION.md](docs/VERSION.md) for the full reasoning.
 

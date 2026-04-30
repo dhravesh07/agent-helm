@@ -10,6 +10,22 @@ struct FileEditorView: View {
                 Divider()
                 content(for: entry)
             }
+            .alert("File changed on remote", isPresented: Binding(
+                get: { session.pendingConflict != nil },
+                set: { if !$0 { session.pendingConflict = nil } }
+            ), presenting: session.pendingConflict) { _ in
+                Button("Reload", role: .cancel) {
+                    Task { await session.resolveConflictByReloading() }
+                }
+                Button("Overwrite", role: .destructive) {
+                    Task { await session.resolveConflictByOverwriting() }
+                }
+                Button("Keep editing") {
+                    session.pendingConflict = nil
+                }
+            } message: { _ in
+                Text("Another writer (likely your agent) modified this file while you were editing. Reload to start over with the remote version, or Overwrite to clobber it with your changes.")
+            }
         } else {
             placeholder
         }
@@ -145,6 +161,8 @@ struct FileEditorView: View {
             MarkdownPreviewView(text: session.editText)
         case (.json, .graph):
             JSONGraphView(text: $session.editText)
+        case (.jsonl, .transcript):
+            JSONLTranscriptView(raw: session.editText)
         case (.json, .formatted):
             JSONPreviewView(raw: session.editText)
         case (.xml, .preview):

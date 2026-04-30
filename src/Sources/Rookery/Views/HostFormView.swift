@@ -131,13 +131,26 @@ struct HostFormView: View {
                     .disabled(workspaces.count <= 1)
                 }
             }
-            HStack {
+            HStack(spacing: 12) {
                 Button {
-                    workspaces.append(Workspace(name: "New", path: kind == .local ? "~" : "~"))
+                    workspaces.append(Workspace(name: "New", path: "~"))
                 } label: {
                     Label("Add workspace", systemImage: "plus")
                 }
                 .buttonStyle(.borderless)
+
+                Menu {
+                    ForEach(AgentPresets.all) { preset in
+                        Button(preset.displayName) {
+                            applyPreset(preset)
+                        }
+                    }
+                } label: {
+                    Label("Add preset…", systemImage: "wand.and.stars")
+                }
+                .menuStyle(.borderlessButton)
+                .fixedSize()
+
                 Spacer()
             }
             Text(kind == .local
@@ -151,6 +164,18 @@ struct HostFormView: View {
     private func remove(_ workspace: Workspace) {
         guard workspaces.count > 1 else { return }
         workspaces.removeAll { $0.id == workspace.id }
+    }
+
+    private func applyPreset(_ preset: AgentPreset) {
+        // Drop the placeholder "Root" workspace if it's the only one and untouched.
+        if workspaces.count == 1, workspaces[0].name == "Root", workspaces[0].path == "~" {
+            workspaces.removeAll()
+        }
+        for w in preset.workspaces {
+            // Don't add duplicates by path.
+            if workspaces.contains(where: { $0.path == w.path }) { continue }
+            workspaces.append(Workspace(name: w.name, path: w.path))
+        }
     }
 
     private func hydrate() {

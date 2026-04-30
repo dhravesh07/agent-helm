@@ -43,10 +43,21 @@ The file-browser header shows a segmented workspace picker when the host has 2+ 
 - 200 MB cap for SQLite files (separate from the 5 MB text-edit cap).
 - **Agent-schema awareness** — registry skeleton in place; specific schema templates (Claude Code session DB, Aider chat history, OpenCode stores) ship as the layouts are verified against real installations.
 
-### Transcript / log viewer (v0.3)
-- **JSONL** transcript viewer — one message per row, expandable inline, role-colored, search.
-- Tail mode for live logs.
-- Common Claude Code session-transcript layouts known by default.
+### Transcript / log viewer (v0.5.0 — implemented)
+- **JSONL** transcript viewer for `.jsonl` and `.ndjson`. One message per row with line number + role badge (color-coded) + preview.
+- Click the chevron or double-click to expand a row: shows full content, any `tool_calls` rendered as JSON chips, and a collapsible raw-JSON disclosure.
+- Live search filters by content / role / raw JSON across the whole file with a result count.
+- Common transcript shapes handled: `role` + string `content`, Anthropic-style array-of-blocks `content`, `type` + `message`, raw arbitrary objects.
+- File-level tail (live-growing files) is the v0.5+ stretch; today's auto-refresh covers directory-level changes.
+
+### Editing safety (v0.5.0 — implemented)
+- **Save-conflict detection.** Captures size + mtime + SHA-256 baseline at file-open. Before save-back, re-stats and re-hashes the remote. If the SHA differs (an agent likely rewrote the file while you were editing), the save pauses and an alert offers **Reload / Overwrite / Keep editing**.
+- Automatic, no upfront lock button — editing stays as easy as a normal text editor; the safety net only fires on actual drift.
+- After successful save, the baseline refreshes so subsequent saves compare against the just-saved state.
+
+### Real-time updates (v0.5.0 — implemented, stretch deferred)
+- **Auto-refresh toggle** in the file browser. When on, polls `listDirectory` every 5 seconds via a `Task` loop tied to view lifecycle. Restarts on path change; cancels on disappear.
+- True inotify-over-SSH (server-side helper script streaming events) and live SQLite tail (WAL polling) are stretch features for after v1.0.
 
 ### Connection lifecycle
 - `NSWorkspace` sleep/wake hooks; mark sessions as `.reconnecting` on wake; auto-reconnect.

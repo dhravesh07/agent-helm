@@ -34,12 +34,17 @@ This abstraction is introduced before any feature (skills installer, DB browser,
 
 ### File browsing & editing
 - Browse the remote filesystem from one or more **workspace paths** per host (see "Workspace paths" below).
-- **All UTF-8 text files are editable** — markdown, code, JSON, YAML, TOML, plain text. Source-mode editing uses a SwiftUI `TextEditor` with monospaced font for code and proportional for prose; binary files surface as "binary, not shown" and are not editable.
-- **Markdown gets a Preview/Source toggle.** Default is Preview when opening a `.md` file; switch to Source to edit. Preview re-renders the in-memory buffer, so live edits show up when toggling back.
-- 5 MB per-file cap for in-app edits in v0.0.6; larger files surface as "too large" with size shown. The cap is configurable in v0.7+.
+- **Per-file-kind preview + edit** (v0.0.7+):
+  - **Markdown** (`.md`, `.markdown`, `.mdown`, `.mkd`) — rendered with [MarkdownUI](https://github.com/gonzalezreal/swift-markdown-ui) (GitHub theme), full block support: headings, lists, code blocks, tables, block quotes, links. Preview/Source toggle.
+  - **JSON** (`.json`) — Preview mode pretty-prints with sorted keys; Source mode shows raw text. Preview/Source toggle.
+  - **Images** (`.png`, `.jpg`, `.jpeg`, `.gif`, `.heic`, `.heif`, `.tiff`, `.bmp`, `.webp`, `.ico`, `.icns`) — rendered via `NSImage`; preview-only, no edit.
+  - **PDFs** (`.pdf`) — rendered via PDFKit's `PDFView` with continuous-vertical scroll; preview-only, no edit.
+  - **All other UTF-8 text** — code, configs, YAML, TOML, CSV, scripts, plain text — opens in monospaced source editor.
+  - **Binary** (anything that fails UTF-8 decode and isn't an image/PDF) — surfaces as "Binary file — not shown".
+- 5 MB per-file cap for in-app edits in v0.0.7; larger files surface as "too large" with size shown. The cap is configurable in v0.8+.
 - Save-back uses Cmd+S or the toolbar button. Local writes are atomic; remote writes use SFTP `[.write, .create, .truncate]`.
-- **Lock-for-Editing model with multi-signal conflict detection** (mtime + size + SHA-256, plus git-aware diff in repos) is the v0.1-finalization layer for use against an active agent — see "Editing model" below. v0.0.6 ships with a Save / Discard pair and a "Modified" indicator; the lock + 3-way diff land before v0.1.0.
-- Real-time updates when files change on the remote (SFTP polling for v0.1; inotify-over-SSH bridge in v0.5+).
+- **Lock-for-Editing model with multi-signal conflict detection** (mtime + size + SHA-256, plus git-aware diff in repos) is the v0.1-finalization layer for use against an active agent — see "Editing model" below. The current release ships with a Save / Discard pair and a "Modified" indicator; the lock + 3-way diff land before v0.1.0.
+- Real-time updates when files change on the remote (SFTP polling for v0.2; inotify-over-SSH bridge in v0.5+).
 
 ### Database inspection
 - Read-only browser for SQLite databases on the remote, transferred lazily over SFTP.
