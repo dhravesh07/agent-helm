@@ -56,6 +56,7 @@ swift test --filter IntegrationTests
 docker compose -f tests/fixtures/sshd-claude/docker-compose.yml down
 ```
 
+
 ## Coverage targets
 
 | Module | Target | Notes |

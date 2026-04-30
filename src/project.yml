@@ -8,8 +8,8 @@ options:
 settings:
   base:
     SWIFT_VERSION: "5.9"
-    MARKETING_VERSION: "0.0.6"
-    CURRENT_PROJECT_VERSION: "6"
+    MARKETING_VERSION: "0.0.7"
+    CURRENT_PROJECT_VERSION: "7"
     DEVELOPMENT_TEAM: ""
     CODE_SIGN_STYLE: Automatic
     CODE_SIGN_IDENTITY: "-"
@@ -21,6 +21,9 @@ packages:
   Citadel:
     url: https://github.com/orlandos-nl/Citadel.git
     from: 0.12.1
+  MarkdownUI:
+    url: https://github.com/gonzalezreal/swift-markdown-ui
+    from: 2.4.1
 
 targets:
   AgentHelm:
@@ -30,6 +33,8 @@ targets:
       - path: Sources/AgentHelm
     dependencies:
       - package: Citadel
+      - package: MarkdownUI
+        product: MarkdownUI
     info:
       path: Sources/AgentHelm/Info.plist
       properties:

@@ -35,12 +35,12 @@ struct FileEditorView: View {
                     .truncationMode(.middle)
             }
             HStack(spacing: 12) {
-                if entry.isMarkdown && session.bufferState.isText {
+                if entry.previewableKind.supportsPreviewToggle && session.bufferState.isText {
                     modeToggle
                 }
                 Spacer()
                 saveStatusLabel
-                if session.bufferState.isText {
+                if entry.previewableKind.isEditableText && session.bufferState.isText {
                     Button("Discard") { session.discardChanges() }
                         .disabled(!session.isDirty || session.saveStatus == .saving)
                     Button {
@@ -101,11 +101,11 @@ struct FileEditorView: View {
             ProgressView("Loading…")
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         case .text:
-            if entry.isMarkdown && session.viewMode == .preview {
-                markdownPreview
-            } else {
-                sourceEditor(isMarkdown: entry.isMarkdown)
-            }
+            textBody(for: entry)
+        case .image(let data):
+            ImagePreviewView(data: data)
+        case .pdf(let data):
+            PDFPreviewView(data: data)
         case .binary(let size):
             statusPane(
                 systemImage: "doc",
@@ -127,25 +127,22 @@ struct FileEditorView: View {
         }
     }
 
-    private var markdownPreview: some View {
-        ScrollView {
-            let attributed = (try? AttributedString(
-                markdown: session.editText,
-                options: AttributedString.MarkdownParsingOptions(
-                    interpretedSyntax: .inlineOnlyPreservingWhitespace
-                )
-            )) ?? AttributedString(session.editText)
-            Text(attributed)
-                .textSelection(.enabled)
-                .font(.body)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(20)
+    @ViewBuilder
+    private func textBody(for entry: RemoteFileEntry) -> some View {
+        switch (entry.previewableKind, session.viewMode) {
+        case (.markdown, .preview):
+            MarkdownPreviewView(text: session.editText)
+        case (.json, .preview):
+            JSONPreviewView(raw: session.editText)
+        default:
+            sourceEditor(for: entry)
         }
     }
 
-    private func sourceEditor(isMarkdown: Bool) -> some View {
-        TextEditor(text: $session.editText)
-            .font(isMarkdown ? .body : .system(.body, design: .monospaced))
+    private func sourceEditor(for entry: RemoteFileEntry) -> some View {
+        let isProse = entry.previewableKind == .markdown
+        return TextEditor(text: $session.editText)
+            .font(isProse ? .body : .system(.body, design: .monospaced))
             .scrollContentBackground(.hidden)
             .padding(.horizontal, 8)
             .padding(.vertical, 6)

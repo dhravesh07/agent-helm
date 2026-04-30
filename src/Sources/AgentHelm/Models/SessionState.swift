@@ -101,8 +101,8 @@ final class SessionState {
 
     func openFile(_ entry: RemoteFileEntry) async {
         if isDirty {
-            // Naive guard for v0.0.6: refuse to swap files with unsaved changes.
-            // A confirmation dialog is the right v0.0.7 polish; for now the user
+            // Naive guard: refuse to swap files with unsaved changes.
+            // A confirmation dialog is the right next polish; for now the user
             // sees the dirty state and can save or discard before switching.
             lastError = "Save your changes before switching files."
             return
@@ -112,7 +112,7 @@ final class SessionState {
         guard !entry.isDirectory else { return }
 
         bufferState = .loading
-        viewMode = entry.isMarkdown ? .preview : .source
+        viewMode = entry.previewableKind.supportsPreviewToggle ? .preview : .source
 
         do {
             let meta = try await service.statFile(at: entry.path)
@@ -121,12 +121,20 @@ final class SessionState {
                 return
             }
             let data = try await service.readFile(at: entry.path, maxBytes: Int(Self.maxFileSize))
-            if let text = String(data: data, encoding: .utf8) {
-                bufferState = .text(original: text)
-                editText = text
-                saveStatus = .idle
-            } else {
-                bufferState = .binary(size: meta.size)
+
+            switch entry.previewableKind {
+            case .image:
+                bufferState = .image(data: data)
+            case .pdf:
+                bufferState = .pdf(data: data)
+            case .markdown, .json, .sourceText:
+                if let text = String(data: data, encoding: .utf8) {
+                    bufferState = .text(original: text)
+                    editText = text
+                    saveStatus = .idle
+                } else {
+                    bufferState = .binary(size: meta.size)
+                }
             }
         } catch {
             bufferState = .error(message: error.localizedDescription)

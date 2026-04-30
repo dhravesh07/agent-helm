@@ -4,6 +4,8 @@ enum FileBufferState: Equatable {
     case empty
     case loading
     case text(original: String)
+    case image(data: Data)
+    case pdf(data: Data)
     case binary(size: UInt64)
     case tooLarge(size: UInt64)
     case error(message: String)
