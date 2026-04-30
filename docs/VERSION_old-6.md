@@ -1,15 +1,8 @@
 # Agent Helm — Version
 
-**Current:** `0.0.2` (pre-release, scaffold + Xcode project)
+**Current:** `0.0.1` (pre-release, scaffold only)
 
 ## Changelog
-
-### 0.0.2 — 2026-04-30
-- Add Xcode project generated from `src/project.yml` via xcodegen.
-- Add `AgentHelm.entitlements` (App Sandbox, network client, user-selected files, downloads read-only).
-- Add `Makefile` with `bootstrap`, `project`, `build`, `test`, `run`, `clean` targets.
-- Build and test both pass via `xcodebuild`.
-- `Package.swift` retained for fast CLI iteration; `AgentHelm.xcodeproj` gitignored (regenerated via `make bootstrap`).
 
 ### 0.0.1 — 2026-04-30
 - Initial scaffold.

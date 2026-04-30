@@ -35,9 +35,7 @@ struct FileEditorView: View {
                     .truncationMode(.middle)
             }
             HStack(spacing: 12) {
-                if entry.previewableKind.supportsPreviewToggle && session.bufferState.isText {
-                    modeToggle
-                }
+                viewModeToggle(for: entry)
                 Spacer()
                 saveStatusLabel
                 if entry.previewableKind.isEditableText && session.bufferState.isText {
@@ -58,15 +56,19 @@ struct FileEditorView: View {
         .padding(.vertical, 10)
     }
 
-    private var modeToggle: some View {
-        Picker("View", selection: $session.viewMode) {
-            ForEach(FileViewMode.allCases) { mode in
-                Label(mode.label, systemImage: mode.systemImage).tag(mode)
+    @ViewBuilder
+    private func viewModeToggle(for entry: RemoteFileEntry) -> some View {
+        let modes = entry.previewableKind.availableViewModes
+        if modes.count >= 2 && session.bufferState.isText {
+            Picker("View", selection: $session.viewMode) {
+                ForEach(modes) { mode in
+                    Label(mode.label, systemImage: mode.systemImage).tag(mode)
+                }
             }
+            .pickerStyle(.segmented)
+            .frame(width: CGFloat(modes.count) * 90 + 20)
+            .labelsHidden()
         }
-        .pickerStyle(.segmented)
-        .frame(width: 220)
-        .labelsHidden()
     }
 
     @ViewBuilder
@@ -132,8 +134,12 @@ struct FileEditorView: View {
         switch (entry.previewableKind, session.viewMode) {
         case (.markdown, .preview):
             MarkdownPreviewView(text: session.editText)
-        case (.json, .preview):
+        case (.json, .graph):
+            JSONGraphView(raw: session.editText)
+        case (.json, .formatted):
             JSONPreviewView(raw: session.editText)
+        case (.xml, .preview):
+            XMLPreviewView(raw: session.editText)
         default:
             sourceEditor(for: entry)
         }
@@ -141,11 +147,10 @@ struct FileEditorView: View {
 
     private func sourceEditor(for entry: RemoteFileEntry) -> some View {
         let isProse = entry.previewableKind == .markdown
-        return TextEditor(text: $session.editText)
-            .font(isProse ? .body : .system(.body, design: .monospaced))
-            .scrollContentBackground(.hidden)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 6)
+        return LineNumberedTextEditor(
+            text: $session.editText,
+            isMonospaced: !isProse
+        )
     }
 
     private func statusPane(systemImage: String, title: String, detail: String) -> some View {

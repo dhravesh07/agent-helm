@@ -22,22 +22,28 @@ enum FileBufferState: Equatable {
 }
 
 enum FileViewMode: String, CaseIterable, Identifiable {
-    case preview
-    case source
+    case preview      // markdown render, XML pretty
+    case graph        // JSON node-graph
+    case formatted    // JSON pretty-print (text)
+    case source       // raw text editor
 
     var id: String { rawValue }
 
     var label: String {
         switch self {
-        case .preview: return "Preview"
-        case .source:  return "Source"
+        case .preview:   return "Preview"
+        case .graph:     return "Graph"
+        case .formatted: return "Pretty"
+        case .source:    return "Source"
         }
     }
 
     var systemImage: String {
         switch self {
-        case .preview: return "doc.richtext"
-        case .source:  return "chevron.left.forwardslash.chevron.right"
+        case .preview:   return "doc.richtext"
+        case .graph:     return "point.3.connected.trianglepath.dotted"
+        case .formatted: return "text.alignleft"
+        case .source:    return "chevron.left.forwardslash.chevron.right"
         }
     }
 }

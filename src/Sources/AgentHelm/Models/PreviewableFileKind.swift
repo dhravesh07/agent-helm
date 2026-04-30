@@ -3,24 +3,29 @@ import Foundation
 enum PreviewableFileKind: Equatable {
     case markdown
     case json
+    case xml
     case image
     case pdf
     case sourceText
 
-    /// Whether this kind has a non-source preview that's worth toggling to.
-    /// Markdown and JSON have a Preview/Source toggle; image/pdf are
-    /// preview-only; sourceText only has a source view.
-    var supportsPreviewToggle: Bool {
+    /// View modes available for this kind, in display order. Empty means no
+    /// toggle — render the single appropriate view (image, pdf, plain source).
+    var availableViewModes: [FileViewMode] {
         switch self {
-        case .markdown, .json: return true
-        case .image, .pdf, .sourceText: return false
+        case .markdown:   return [.preview, .source]
+        case .json:       return [.graph, .formatted, .source]
+        case .xml:        return [.preview, .source]
+        case .image, .pdf, .sourceText: return []
         }
     }
 
-    /// Whether this kind is editable as text. Images and PDFs are not.
+    var defaultViewMode: FileViewMode {
+        availableViewModes.first ?? .source
+    }
+
     var isEditableText: Bool {
         switch self {
-        case .markdown, .json, .sourceText: return true
+        case .markdown, .json, .xml, .sourceText: return true
         case .image, .pdf: return false
         }
     }
@@ -34,6 +39,8 @@ extension RemoteFileEntry {
             return .markdown
         case "json":
             return .json
+        case "xml", "plist", "xib", "storyboard", "rss", "atom", "svg":
+            return .xml
         case "png", "jpg", "jpeg", "gif", "heic", "heif",
              "tiff", "tif", "bmp", "webp", "ico", "icns":
             return .image

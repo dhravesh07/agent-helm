@@ -112,7 +112,7 @@ final class SessionState {
         guard !entry.isDirectory else { return }
 
         bufferState = .loading
-        viewMode = entry.previewableKind.supportsPreviewToggle ? .preview : .source
+        viewMode = entry.previewableKind.defaultViewMode
 
         do {
             let meta = try await service.statFile(at: entry.path)
@@ -127,7 +127,7 @@ final class SessionState {
                 bufferState = .image(data: data)
             case .pdf:
                 bufferState = .pdf(data: data)
-            case .markdown, .json, .sourceText:
+            case .markdown, .json, .xml, .sourceText:
                 if let text = String(data: data, encoding: .utf8) {
                     bufferState = .text(original: text)
                     editText = text
