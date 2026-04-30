@@ -2,6 +2,7 @@ import SwiftUI
 
 struct FileBrowserView: View {
     @Bindable var session: SessionState
+    @State private var highlightedId: RemoteFileEntry.ID?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -85,20 +86,7 @@ struct FileBrowserView: View {
             if session.entries.isEmpty {
                 placeholder("Empty directory", systemImage: "tray")
             } else {
-                List(session.entries, selection: Binding(
-                    get: { session.selectedFile?.id },
-                    set: { newId in
-                        guard let id = newId,
-                              let entry = session.entries.first(where: { $0.id == id }) else { return }
-                        Task {
-                            if entry.isDirectory {
-                                await session.navigate(to: entry.path)
-                            } else {
-                                await session.openFile(entry)
-                            }
-                        }
-                    }
-                )) { entry in
+                List(session.entries, selection: $highlightedId) { entry in
                     HStack {
                         Image(systemName: icon(for: entry))
                             .foregroundStyle(entry.isDirectory ? .blue : .secondary)
@@ -112,7 +100,43 @@ struct FileBrowserView: View {
                         }
                     }
                     .tag(entry.id)
+                    .contentShape(Rectangle())
+                    // Single click highlights via List's selection binding above.
+                    // Double click navigates into a folder or opens a file.
+                    .onTapGesture(count: 2) {
+                        Task {
+                            if entry.isDirectory {
+                                await session.navigate(to: entry.path)
+                            } else {
+                                await session.openFile(entry)
+                            }
+                        }
+                    }
                 }
+                // Enter / Return on the highlighted row also activates it,
+                // matching Finder's keyboard behavior.
+                .onKeyPress(.return) {
+                    activateHighlighted()
+                    return .handled
+                }
+                .onChange(of: session.rootPath) { _, _ in
+                    highlightedId = nil
+                }
+                .onChange(of: session.selectedFile?.id) { _, newId in
+                    if let newId { highlightedId = newId }
+                }
+            }
+        }
+    }
+
+    private func activateHighlighted() {
+        guard let id = highlightedId,
+              let entry = session.entries.first(where: { $0.id == id }) else { return }
+        Task {
+            if entry.isDirectory {
+                await session.navigate(to: entry.path)
+            } else {
+                await session.openFile(entry)
             }
         }
     }

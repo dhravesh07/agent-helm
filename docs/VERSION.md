@@ -1,8 +1,16 @@
 # Agent Helm — Version
 
-**Current:** `0.0.9` (workspaces, sleep/wake resilience, syntax highlighting, JSON graph polish)
+**Current:** `0.0.10` (double-click navigation)
 
 ## Changelog
+
+### 0.0.10 — 2026-04-30
+**File browser navigation matches Finder semantics.** Single-click on a row now just highlights it; double-click (or Enter on the highlighted row) navigates into a folder or opens a file. The previous single-click-to-navigate behavior felt aggressive — folders fired before the user could even read the name.
+
+- `FileBrowserView` adds `@State private var highlightedId: RemoteFileEntry.ID?` for the list selection. The `List` selection binding now points at this state instead of triggering navigation.
+- `.onTapGesture(count: 2)` on each row activates it (folder → navigate, file → open).
+- `.onKeyPress(.return)` on the list activates the highlighted row, matching macOS keyboard expectations.
+- Highlight resets when the directory changes.
 
 ### 0.0.9 — 2026-04-30
 **Four big items, all delivered.**
