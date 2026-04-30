@@ -4,7 +4,7 @@
 
 Agent Helm connects to one or more Linux hosts over SSH and gives you structured editors for the things you actually need to manage when running Claude Code, OpenClaude, Aider, or similar agents on a remote box: the markdown files (skills, system prompts, notes), the agent's local SQLite databases, the cron schedules, and the agent processes themselves. One pane of glass, no terminal-juggling.
 
-**Status:** v0.0.5 walking skeleton. SSH **and local** browsing both work, auto-connect on selection, markdown viewer renders inline. Workspace-paths refactor and edit/save are next. See [ROADMAP.md](docs/ROADMAP.md) for what's coming.
+**Status:** v0.0.6. SSH + local browsing, auto-connect on select, **read & edit any text file** (Markdown gets a Preview/Source toggle), Save / Discard / dirty indicator, Cmd+S. SQLite browser and lock-for-editing are next. See [ROADMAP.md](docs/ROADMAP.md).
 
 ## Why
 

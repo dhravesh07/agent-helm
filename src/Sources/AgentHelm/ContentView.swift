@@ -28,7 +28,7 @@ struct ContentView: View {
             }
         } detail: {
             if let session = currentSession {
-                MarkdownViewerView(entry: session.selectedFile, contents: session.fileContents)
+                FileEditorView(session: session)
             } else {
                 welcome
             }

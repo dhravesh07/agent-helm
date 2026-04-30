@@ -4,6 +4,8 @@ enum LocalFileServiceError: LocalizedError {
     case rootNotFound(path: String)
     case rootNotDirectory(path: String)
     case readFailed(path: String, underlying: String)
+    case writeFailed(path: String, underlying: String)
+    case statFailed(path: String, underlying: String)
 
     var errorDescription: String? {
         switch self {
@@ -13,6 +15,10 @@ enum LocalFileServiceError: LocalizedError {
             return "Path is not a directory: \(p)"
         case .readFailed(let p, let m):
             return "Could not read file at \(p): \(m)"
+        case .writeFailed(let p, let m):
+            return "Could not write file at \(p): \(m)"
+        case .statFailed(let p, let m):
+            return "Could not stat file at \(p): \(m)"
         }
     }
 }
@@ -67,12 +73,37 @@ actor LocalFileService: RemoteFileService {
         }
     }
 
-    func readTextFile(at path: String) async throws -> String {
+    func statFile(at path: String) async throws -> RemoteFileMetadata {
         let resolved = Self.expand(path)
         do {
-            return try String(contentsOfFile: resolved, encoding: .utf8)
+            let attrs = try FileManager.default.attributesOfItem(atPath: resolved)
+            let size = (attrs[.size] as? NSNumber)?.uint64Value ?? 0
+            let mtime = attrs[.modificationDate] as? Date
+            return RemoteFileMetadata(size: size, mtime: mtime)
+        } catch {
+            throw LocalFileServiceError.statFailed(path: resolved, underlying: error.localizedDescription)
+        }
+    }
+
+    func readFile(at path: String, maxBytes: Int) async throws -> Data {
+        let resolved = Self.expand(path)
+        do {
+            let url = URL(fileURLWithPath: resolved)
+            let handle = try FileHandle(forReadingFrom: url)
+            defer { try? handle.close() }
+            return try handle.read(upToCount: maxBytes) ?? Data()
         } catch {
             throw LocalFileServiceError.readFailed(path: resolved, underlying: error.localizedDescription)
+        }
+    }
+
+    func writeFile(at path: String, contents: Data) async throws {
+        let resolved = Self.expand(path)
+        let url = URL(fileURLWithPath: resolved)
+        do {
+            try contents.write(to: url, options: .atomic)
+        } catch {
+            throw LocalFileServiceError.writeFailed(path: resolved, underlying: error.localizedDescription)
         }
     }
 

@@ -1,6 +1,7 @@
 import Foundation
 import Citadel
 import Crypto
+import NIOCore
 import NIOSSH
 
 enum SSHServiceError: LocalizedError {
@@ -8,17 +9,20 @@ enum SSHServiceError: LocalizedError {
     case unsupportedKeyFormat
     case notConnected
     case remoteRead(String)
+    case remoteWrite(String)
 
     var errorDescription: String? {
         switch self {
         case .keyFileNotReadable(let p):
             return "Private key file is not readable: \(p)"
         case .unsupportedKeyFormat:
-            return "Only OpenSSH ed25519 and RSA keys are supported in v0.0.3."
+            return "Only OpenSSH ed25519 and RSA keys are supported in v0.0.6."
         case .notConnected:
             return "Not connected to a host."
         case .remoteRead(let m):
             return "Remote read failed: \(m)"
+        case .remoteWrite(let m):
+            return "Remote write failed: \(m)"
         }
     }
 }
@@ -93,16 +97,41 @@ actor SSHService: RemoteFileService {
         }
     }
 
-    func readTextFile(at path: String) async throws -> String {
+    func statFile(at path: String) async throws -> RemoteFileMetadata {
         guard let sftp else { throw SSHServiceError.notConnected }
+        let attrs = try await sftp.withFile(filePath: path, flags: .read) { file in
+            try await file.readAttributes()
+        }
+        return RemoteFileMetadata(
+            size: attrs.size ?? 0,
+            mtime: attrs.accessModificationTime?.modificationTime
+        )
+    }
+
+    func readFile(at path: String, maxBytes: Int) async throws -> Data {
+        guard let sftp else { throw SSHServiceError.notConnected }
+        let length = UInt32(min(maxBytes, Int(UInt32.max)))
         let buffer = try await sftp.withFile(filePath: path, flags: .read) { file in
-            try await file.readAll()
+            try await file.read(from: 0, length: length)
         }
         let bytes = buffer.getBytes(at: buffer.readerIndex, length: buffer.readableBytes) ?? []
-        guard let text = String(bytes: bytes, encoding: .utf8) else {
-            throw SSHServiceError.remoteRead("File at \(path) is not valid UTF-8.")
+        return Data(bytes)
+    }
+
+    func writeFile(at path: String, contents: Data) async throws {
+        guard let sftp else { throw SSHServiceError.notConnected }
+        do {
+            try await sftp.withFile(
+                filePath: path,
+                flags: [.write, .create, .truncate]
+            ) { file in
+                var buffer = ByteBuffer()
+                buffer.writeBytes(contents)
+                try await file.write(buffer, at: 0)
+            }
+        } catch {
+            throw SSHServiceError.remoteWrite(error.localizedDescription)
         }
-        return text
     }
 
     private static func makeAuthMethod(profile: HostProfile) throws -> SSHAuthenticationMethod {
