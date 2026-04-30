@@ -6,12 +6,8 @@ struct ContentView: View {
     @State private var sessions: [HostProfile.ID: SessionState] = [:]
 
     private var currentSession: SessionState? {
-        guard let id = selectedHostId,
-              let profile = hostStore.hosts.first(where: { $0.id == id }) else { return nil }
-        if let existing = sessions[id] { return existing }
-        let new = SessionState(profile: profile)
-        sessions[id] = new
-        return new
+        guard let id = selectedHostId else { return nil }
+        return sessions[id]
     }
 
     var body: some View {
@@ -37,8 +33,32 @@ struct ContentView: View {
                 welcome
             }
         }
-        .onChange(of: selectedHostId) { _, _ in
-            // The session is created lazily by `currentSession`; views observe it directly.
+        .onChange(of: selectedHostId, initial: true) { _, newId in
+            ensureSession(for: newId)
+        }
+    }
+
+    private func ensureSession(for id: HostProfile.ID?) {
+        guard let id,
+              let profile = hostStore.hosts.first(where: { $0.id == id }) else { return }
+
+        let session: SessionState
+        if let existing = sessions[id] {
+            session = existing
+        } else {
+            session = SessionState(profile: profile)
+            sessions[id] = session
+        }
+
+        // Auto-connect on selection. Local connections are instant; remote ones
+        // kick off the async connect and surface progress via the toolbar spinner.
+        // Skip if already connecting/connected, or if the user just hit a hard
+        // failure — they need to retry manually so we don't loop on a bad config.
+        switch session.status {
+        case .disconnected:
+            Task { await session.connect() }
+        case .connecting, .connected, .failed:
+            break
         }
     }
 

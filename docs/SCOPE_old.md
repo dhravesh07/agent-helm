@@ -1,7 +1,14 @@
 # Agent Helm — Scope
 
 ## What it is
-A native macOS client for managing AI coding agents (Claude Code, OpenClaude, OpenCode, Aider-as-daemon, etc.) running on remote Linux servers. One pane of glass for the operator side of self-hosted agent setups.
+A native macOS client for managing AI coding agents (Claude Code, OpenClaude, OpenCode, Aider-as-daemon, etc.) — whether they run **locally on the same Mac** or on **remote Linux servers**. One pane of glass for the operator side of self-hosted agent setups.
+
+## Connection kinds (v0.0.4+)
+A host profile is one of:
+- **Local** — points at a folder on the current Mac (e.g., `~/.claude`, an `openclaude` directory, any project root). No network, no auth; backed by `FileManager`.
+- **Remote (SSH)** — connects to a Linux server over SSH; backed by Citadel SFTP.
+
+Both kinds use the same browser/viewer UI; the file backend is abstracted behind `RemoteFileService`.
 
 ## In scope (v0–v1)
 
@@ -35,7 +42,7 @@ A native macOS client for managing AI coding agents (Claude Code, OpenClaude, Op
 
 ## Out of scope
 
-- **Running agents on the Mac itself.** Claude Code Desktop already does this; Agent Helm is for remote agents on Linux.
+- **Running agents themselves.** Agent Helm is the operator/control surface — viewing and editing the agent's state files, schedules, DBs, and skills. Use Claude Code, Cursor, or your editor of choice to actually run the agent. Local-mode just means we can browse the Mac's own filesystem; we don't host the agent process.
 - **General-purpose terminal.** Termius, Tabby, and friends do this well — Agent Helm's terminal pane (if any) is a fallback, not the headline feature.
 - **Cloud orchestration.** No Kubernetes, no AWS console. Agent Helm assumes long-running boxes the user owns.
 - **Windows / Linux client.** Mac-only. Cross-platform may be a v2+ conversation.
