@@ -1,0 +1,23 @@
+# Swift / SwiftPM
+.build/
+Packages/
+*.xcodeproj/
+!default.xcodeproj
+xcuserdata/
+DerivedData/
+.swiftpm/
+Package.resolved
+
+# macOS
+.DS_Store
+*.swp
+
+# Editor
+.vscode/
+.idea/
+
+# Local config / secrets — never commit
+*.local.json
+.env
+.env.*
+secrets/
