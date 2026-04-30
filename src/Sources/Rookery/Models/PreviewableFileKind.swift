@@ -3,7 +3,9 @@ import Foundation
 enum PreviewableFileKind: Equatable {
     case markdown
     case json
+    case jsonl
     case xml
+    case sqlite
     case image
     case pdf
     case sourceText
@@ -14,7 +16,9 @@ enum PreviewableFileKind: Equatable {
         switch self {
         case .markdown:   return [.preview, .source]
         case .json:       return [.graph, .formatted, .source]
+        case .jsonl:      return [.transcript, .source]
         case .xml:        return [.preview, .source]
+        case .sqlite:     return [.tables, .schema, .query]
         case .image, .pdf, .sourceText: return []
         }
     }
@@ -25,8 +29,8 @@ enum PreviewableFileKind: Equatable {
 
     var isEditableText: Bool {
         switch self {
-        case .markdown, .json, .xml, .sourceText: return true
-        case .image, .pdf: return false
+        case .markdown, .json, .jsonl, .xml, .sourceText: return true
+        case .image, .pdf, .sqlite: return false
         }
     }
 }
@@ -39,8 +43,12 @@ extension RemoteFileEntry {
             return .markdown
         case "json":
             return .json
+        case "jsonl", "ndjson":
+            return .jsonl
         case "xml", "plist", "xib", "storyboard", "rss", "atom", "svg":
             return .xml
+        case "db", "sqlite", "sqlite3", "db3":
+            return .sqlite
         case "png", "jpg", "jpeg", "gif", "heic", "heif",
              "tiff", "tif", "bmp", "webp", "ico", "icns":
             return .image

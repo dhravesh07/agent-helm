@@ -8,8 +8,8 @@ options:
 settings:
   base:
     SWIFT_VERSION: "5.9"
-    MARKETING_VERSION: "0.0.10"
-    CURRENT_PROJECT_VERSION: "10"
+    MARKETING_VERSION: "0.2.0"
+    CURRENT_PROJECT_VERSION: "20"
     DEVELOPMENT_TEAM: ""
     CODE_SIGN_STYLE: Automatic
     CODE_SIGN_IDENTITY: "-"
@@ -24,6 +24,9 @@ packages:
   MarkdownUI:
     url: https://github.com/gonzalezreal/swift-markdown-ui
     from: 2.4.1
+  GRDB:
+    url: https://github.com/groue/GRDB.swift.git
+    from: 7.10.0
 
 targets:
   Rookery:
@@ -35,6 +38,8 @@ targets:
       - package: Citadel
       - package: MarkdownUI
         product: MarkdownUI
+      - package: GRDB
+        product: GRDB
     info:
       path: Sources/Rookery/Info.plist
       properties:

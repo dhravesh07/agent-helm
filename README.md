@@ -6,7 +6,7 @@
 
 Local-first, with optional SSH for remote agents on Linux servers. Cross-vendor (Claude Code, Aider, OpenCode, OpenClaude, Continue, Cline). It's a **state inspector**, not a chat surface, not an SSH terminal, not an agent runner.
 
-**Status:** v0.1.0. SSH + local browsing, per-host workspaces, auto-connect, sleep/wake reconnect. Markdown / JSON Graph / XML / image / PDF preview. Line-numbered source editor with syntax highlighting for 10 languages. Save / Discard / Cmd+S. **SQLite inspector with agent-schema awareness lands in v0.2.0** (the headline feature for the new direction). See [ROADMAP.md](docs/ROADMAP.md).
+**Status:** v0.2.0. SSH + local browsing, per-host workspaces, auto-connect, sleep/wake reconnect. Markdown / JSON Graph / XML / image / PDF preview. **SQLite inspector** with Tables / Schema / Query modes, paginated grid, read-only SQL runner. Line-numbered source editor with syntax highlighting for 11 languages (now including SQL). Save / Discard / Cmd+S. JSONL transcript viewer next. See [ROADMAP.md](docs/ROADMAP.md).
 
 > **Note:** Pre-v0.1 versions (0.0.1 through 0.0.10) shipped under the name "Agent Helm." The project was renamed to Rookery at v0.1.0 due to a name collision with [agenthelm.online](https://agenthelm.online) and a deliberate direction pivot from "control plane" to "state inspector." See [VERSION.md](docs/VERSION.md) for the full reasoning.
 

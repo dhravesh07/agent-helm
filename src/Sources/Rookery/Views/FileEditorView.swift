@@ -59,7 +59,14 @@ struct FileEditorView: View {
     @ViewBuilder
     private func viewModeToggle(for entry: RemoteFileEntry) -> some View {
         let modes = entry.previewableKind.availableViewModes
-        if modes.count >= 2 && session.bufferState.isText {
+        // Show toggle when there are 2+ modes AND the buffer is in a renderable
+        // state — text for editable kinds, sqlite for the DB inspector.
+        let bufferReady: Bool = {
+            if session.bufferState.isText { return true }
+            if case .sqlite = session.bufferState { return true }
+            return false
+        }()
+        if modes.count >= 2 && bufferReady {
             Picker("View", selection: $session.viewMode) {
                 ForEach(modes) { mode in
                     Label(mode.label, systemImage: mode.systemImage).tag(mode)
@@ -108,6 +115,8 @@ struct FileEditorView: View {
             ImagePreviewView(data: data)
         case .pdf(let data):
             PDFPreviewView(data: data)
+        case .sqlite(let localPath, _):
+            SQLiteBrowserView(localPath: localPath, mode: session.viewMode)
         case .binary(let size):
             statusPane(
                 systemImage: "doc",

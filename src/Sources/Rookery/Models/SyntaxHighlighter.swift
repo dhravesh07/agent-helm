@@ -36,7 +36,7 @@ struct LanguageSpec {
 }
 
 enum SyntaxLanguages {
-    static let all: [LanguageSpec] = [swift, python, javascript, json, yaml, toml, shell, ruby, go, rust]
+    static let all: [LanguageSpec] = [swift, python, javascript, json, yaml, toml, shell, ruby, go, rust, sql]
 
     static func spec(forExtension ext: String) -> LanguageSpec? {
         let lower = ext.lowercased()
@@ -188,6 +188,20 @@ enum SyntaxLanguages {
             rule(#"\b\d+(?:\.\d+)?\b"#, .number),
             rule(#"\b(fn|let|mut|const|static|struct|enum|trait|impl|pub|use|mod|crate|extern|return|if|else|for|while|loop|match|break|continue|in|as|ref|move|where|dyn|async|await|unsafe|self|Self|true|false)\b"#, .keyword),
             rule(#"\b(None|Some|Ok|Err)\b"#, .builtin),
+        ].compactMap { $0 }
+    )
+
+    static let sql: LanguageSpec = LanguageSpec(
+        name: "sql",
+        extensions: ["sql"],
+        rules: [
+            rule(#"--[^\n]*"#, .comment),
+            rule(#"/\*[\s\S]*?\*/"#, .comment),
+            rule(#"'(?:''|[^'])*'"#, .string),
+            rule(#""(?:""|[^"])*""#, .string),
+            rule(#"\b\d+(?:\.\d+)?\b"#, .number),
+            rule(#"\b(?i:SELECT|FROM|WHERE|JOIN|LEFT|RIGHT|INNER|OUTER|FULL|CROSS|ON|USING|GROUP|BY|ORDER|HAVING|LIMIT|OFFSET|UNION|INTERSECT|EXCEPT|ALL|DISTINCT|AS|AND|OR|NOT|IN|EXISTS|BETWEEN|LIKE|GLOB|IS|NULL|CASE|WHEN|THEN|ELSE|END|WITH|RECURSIVE|PRAGMA|EXPLAIN|QUERY|PLAN|INSERT|UPDATE|DELETE|CREATE|DROP|ALTER|TABLE|VIEW|INDEX|TRIGGER|IF|REPLACE|INTO|VALUES|SET|RETURNING|BEGIN|COMMIT|ROLLBACK|TRANSACTION|SAVEPOINT|VACUUM|ANALYZE|ATTACH|DETACH|REINDEX)\b"#, .keyword),
+            rule(#"\b(?i:TRUE|FALSE|NULL)\b"#, .builtin),
         ].compactMap { $0 }
     )
 }

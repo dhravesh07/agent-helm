@@ -146,6 +146,10 @@ final class SessionState {
 
     // MARK: - File open / read
 
+    /// SQLite databases bypass the in-app text-buffer cap (5 MB) — agent DBs
+    /// can be tens of megabytes. The hard ceiling for SQLite open is higher.
+    static let maxSQLiteSize: UInt64 = 200 * 1024 * 1024  // 200 MB
+
     func openFile(_ entry: RemoteFileEntry) async {
         if isDirty {
             lastError = "Save your changes before switching files."
@@ -157,6 +161,13 @@ final class SessionState {
 
         bufferState = .loading
         viewMode = entry.previewableKind.defaultViewMode
+
+        // SQLite has a separate path: open from a local file directly (or
+        // download to a cache file for remote) and feed it to GRDB.
+        if entry.previewableKind == .sqlite {
+            await openSQLite(entry)
+            return
+        }
 
         do {
             let meta = try await service.statFile(at: entry.path)
@@ -171,7 +182,10 @@ final class SessionState {
                 bufferState = .image(data: data)
             case .pdf:
                 bufferState = .pdf(data: data)
-            case .markdown, .json, .xml, .sourceText:
+            case .sqlite:
+                // Handled above by openSQLite. Should be unreachable.
+                bufferState = .error(message: "Unexpected SQLite path.")
+            case .markdown, .json, .jsonl, .xml, .sourceText:
                 if let text = String(data: data, encoding: .utf8) {
                     bufferState = .text(original: text)
                     editText = text
@@ -184,6 +198,60 @@ final class SessionState {
             bufferState = .error(message: error.localizedDescription)
             lastError = error.localizedDescription
         }
+    }
+
+    private func openSQLite(_ entry: RemoteFileEntry) async {
+        do {
+            let meta = try await service.statFile(at: entry.path)
+            if meta.size > Self.maxSQLiteSize {
+                bufferState = .tooLarge(size: meta.size)
+                return
+            }
+
+            let localURL: URL
+            switch profile.kind {
+            case .local:
+                localURL = URL(fileURLWithPath: (entry.path as NSString).expandingTildeInPath)
+            case .remote:
+                let data = try await service.readFile(at: entry.path, maxBytes: Int(Self.maxSQLiteSize))
+                localURL = try Self.cacheSQLite(data: data, host: profile, remotePath: entry.path)
+            }
+            bufferState = .sqlite(localPath: localURL, size: meta.size)
+        } catch {
+            bufferState = .error(message: error.localizedDescription)
+            lastError = error.localizedDescription
+        }
+    }
+
+    /// Writes the bytes to `~/Library/Caches/Rookery/<host>-<sha-of-path>.db`
+    /// and returns the local URL. Stable across calls so a refresh reuses the
+    /// same path.
+    private static func cacheSQLite(data: Data, host: HostProfile, remotePath: String) throws -> URL {
+        let caches = try FileManager.default.url(
+            for: .cachesDirectory,
+            in: .userDomainMask,
+            appropriateFor: nil,
+            create: true
+        )
+        let dir = caches.appendingPathComponent("Rookery", isDirectory: true)
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let key = "\(host.id.uuidString)-\(remotePath)"
+        let hash = Self.shortHash(of: key)
+        let ext = (remotePath as NSString).pathExtension
+        let filename = "\(host.name)-\(hash).\(ext.isEmpty ? "db" : ext)"
+            .replacingOccurrences(of: "/", with: "-")
+        let target = dir.appendingPathComponent(filename)
+        try data.write(to: target, options: .atomic)
+        return target
+    }
+
+    private static func shortHash(of string: String) -> String {
+        // Cheap deterministic hash; we don't need cryptographic strength here.
+        var h: UInt64 = 5381
+        for byte in string.utf8 {
+            h = h &* 33 &+ UInt64(byte)
+        }
+        return String(h, radix: 16)
     }
 
     // MARK: - File save

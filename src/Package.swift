@@ -12,6 +12,7 @@ let package = Package(
     dependencies: [
         .package(url: "https://github.com/orlandos-nl/Citadel.git", from: "0.12.1"),
         .package(url: "https://github.com/gonzalezreal/swift-markdown-ui", from: "2.4.1"),
+        .package(url: "https://github.com/groue/GRDB.swift.git", from: "7.10.0"),
     ],
     targets: [
         .executableTarget(
@@ -19,6 +20,7 @@ let package = Package(
             dependencies: [
                 .product(name: "Citadel", package: "Citadel"),
                 .product(name: "MarkdownUI", package: "swift-markdown-ui"),
+                .product(name: "GRDB", package: "GRDB.swift"),
             ],
             path: "Sources/Rookery",
             exclude: [
