@@ -2,6 +2,8 @@
 
 Versions follow SemVer. Project pivoted from "Agent Helm — control plane" to "Rookery — state inspector" at v0.1.0 (see VERSION.md and MOAT.md). Pre-v0.1 versions (0.0.1 through 0.0.10) shipped under the Agent Helm name and are preserved in `_old` doc snapshots.
 
+**As of v0.5.0, the inspector use case is feature-complete.** Remaining work is signing/notarization (needs paid Apple Developer account), Keychain (needs real encrypted SSH keys to validate), and stretch features.
+
 ## v0.1.0 — Released foundation
 *The whole 0.0.x file-browsing-and-editing arc consolidated under the new name and direction.*
 
@@ -13,7 +15,7 @@ Versions follow SemVer. Project pivoted from "Agent Helm — control plane" to "
 - [x] Save / Discard / Cmd+S, dirty indicator.
 - [x] Single-click selects, double-click navigates (Finder-style).
 
-## v0.2.0 — SQLite inspector with agent-schema awareness *(next)*
+## v0.2.0 — SQLite inspector ✓ shipped
 The headline feature for the new direction. Mac-native, opinionated about known agent layouts.
 
 - [ ] Recognize `.db`, `.sqlite`, `.sqlite3`, `.db3` as a new file kind.
@@ -31,26 +33,25 @@ The headline feature for the new direction. Mac-native, opinionated about known 
   - Generic vector-index tables (e.g., `embeddings(id, vector, metadata)`) — collapse vector blobs.
 - [ ] Add `Models/AgentSchemas/` with one spec per known agent.
 
-## v0.3.0 — JSONL transcript viewer
-Companion to the SQLite inspector for the agents that store sessions as JSONL on disk.
+## v0.3.0 — JSONL transcript viewer ✓ shipped (in v0.5.0)
+- [x] Recognize `.jsonl` and `.ndjson` as a new file kind.
+- [x] One message per row, expand inline (chevron + double-click) to see content / tool calls / raw JSON.
+- [x] Role-colored rows (user blue / assistant purple / system gray / tool orange / error red).
+- [x] Search within transcript with live filtering and result count.
+- [x] Common transcript shapes recognized: `role`+string content, `role`+array-of-blocks (Anthropic style), `type`+message.
+- [ ] Tail mode for live-growing files — deferred to a later slice; auto-refresh covers directory-level updates today.
 
-- [ ] Recognize `.jsonl` as a new file kind.
-- [ ] One message per row, expand inline to see content / tool calls / tool results.
-- [ ] Role-colored rows (user / assistant / system / tool).
-- [ ] Search within transcript.
-- [ ] Tail mode for live-growing files.
-- [ ] Common Claude Code session-transcript layouts known by default.
+## v0.4.0 — Polish for the inspect-and-tweak loop ✓ partially shipped (in v0.5.0)
+- [x] Save-conflict detection (multi-signal: size + mtime + SHA-256). Captures baseline at file-open; re-stats and re-hashes on save; raises an alert if the remote drifted (likely an agent rewrote it). Auto, not opt-in — user explicitly requested editing stay easy. (Lock-for-Editing as an opt-in upfront mode is deferred — drift detection on save covers the same need with less ceremony.)
+- [x] Onboarding presets: "Add preset…" menu in the host form. 7 presets covering Claude Code / Aider / OpenCode / OpenClaude / Continue / Cline / Codex.
+- [ ] Keychain integration for encrypted-key passphrases — needs real encrypted SSH keys to validate. Deferred until tester is available.
+- [ ] App Sandbox + security-scoped bookmarks — needs signed builds (paid Apple Developer account). Deferred to v1.0.
+- [ ] Git-aware diff: when the directory is a git repo, capture `git status` as a second integrity axis. Stretch.
 
-## v0.4.0 — Polish for the inspect-and-tweak loop
-- [ ] Lock-for-Editing UI with multi-signal conflict detection (mtime + size + SHA-256 + git status when applicable). Becomes worth the complexity once SQLite + transcript live alongside live agent writes.
-- [ ] Keychain integration for SSH passphrases (encrypted private keys).
-- [ ] Onboarding: when a new host is added, sniff well-known paths (`~/.claude`, `~/.config/aider`, etc.) and offer to add them as workspaces.
-- [ ] App Sandbox + security-scoped bookmarks for SSH key files (sandbox is OFF in pre-release builds).
-
-## v0.5.0 — Real-time updates
-- [ ] SFTP polling watcher with debounce — file tree updates when contents change on the remote.
-- [ ] inotify-over-SSH bridge — sub-second refresh on remote.
-- [ ] Live tail for SQLite (poll + incremental fetch on WAL changes).
+## v0.5.0 — Real-time updates ✓ partially shipped
+- [x] SFTP polling watcher: 5s polling toggle in the file browser, runs as a `Task` loop tied to view lifecycle, restarts on path change, cancels on disappear.
+- [ ] inotify-over-SSH bridge for sub-second remote refresh — server-side helper script + streaming over SSH channel. Stretch; polling covers the universal case.
+- [ ] Live tail for SQLite (poll WAL + incremental fetch). Stretch.
 
 ## v1.0 — Polished release
 - [ ] Signed and notarized DMG via GitHub Releases.

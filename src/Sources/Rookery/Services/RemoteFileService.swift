@@ -16,4 +16,9 @@ protocol RemoteFileService: Sendable {
     func statFile(at path: String) async throws -> RemoteFileMetadata
     func readFile(at path: String, maxBytes: Int) async throws -> Data
     func writeFile(at path: String, contents: Data) async throws
+
+    /// Run a shell command and return stdout. Used for `crontab -l`,
+    /// reading the mail spool, and triggering one-shot cron runs.
+    /// Throws on non-zero exit if the underlying transport surfaces it.
+    func runShellCommand(_ command: String) async throws -> String
 }

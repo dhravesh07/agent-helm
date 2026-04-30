@@ -34,14 +34,16 @@ This abstraction is introduced before any feature (skills installer, DB browser,
 
 ### File browsing & editing
 - Browse the remote filesystem from one or more **workspace paths** per host (see "Workspace paths" below).
-- **Per-file-kind preview + edit** (v0.0.7+):
-  - **Markdown** (`.md`, `.markdown`, `.mdown`, `.mkd`) — rendered with [MarkdownUI](https://github.com/gonzalezreal/swift-markdown-ui) (GitHub theme), full block support: headings, lists, code blocks, tables, block quotes, links. Preview/Source toggle.
-  - **JSON** (`.json`) — Preview mode pretty-prints with sorted keys; Source mode shows raw text. Preview/Source toggle.
+- **Per-file-kind preview + edit** (v0.0.8):
+  - **Markdown** (`.md`, `.markdown`, `.mdown`, `.mkd`) — rendered with [MarkdownUI](https://github.com/gonzalezreal/swift-markdown-ui) (GitHub theme), full block support: headings, lists, code blocks, tables, block quotes, links. Modes: **Preview / Source**.
+  - **JSON** (`.json`) — Modes: **Graph / Pretty / Source**. Graph view is a jsoncrack-style hierarchical node-graph rendered natively in SwiftUI (Canvas + positioned cards) with bezier edges between parent rows and child nodes, and a zoom control. Pretty view is `JSONSerialization` pretty-print with sorted keys. Source is the raw text editor.
+  - **XML** (`.xml`, `.plist`, `.xib`, `.storyboard`, `.rss`, `.atom`, `.svg`) — Modes: **Preview / Source**. Preview pretty-prints via Foundation `XMLDocument` with `[.nodePrettyPrint, .nodeCompactEmptyElement]`.
   - **Images** (`.png`, `.jpg`, `.jpeg`, `.gif`, `.heic`, `.heif`, `.tiff`, `.bmp`, `.webp`, `.ico`, `.icns`) — rendered via `NSImage`; preview-only, no edit.
   - **PDFs** (`.pdf`) — rendered via PDFKit's `PDFView` with continuous-vertical scroll; preview-only, no edit.
-  - **All other UTF-8 text** — code, configs, YAML, TOML, CSV, scripts, plain text — opens in monospaced source editor.
+  - **All other UTF-8 text** — code, configs, YAML, TOML, CSV, scripts, plain text — opens in the source editor.
   - **Binary** (anything that fails UTF-8 decode and isn't an image/PDF) — surfaces as "Binary file — not shown".
-- 5 MB per-file cap for in-app edits in v0.0.7; larger files surface as "too large" with size shown. The cap is configurable in v0.8+.
+- **Source editor** (v0.0.8+) is `LineNumberedTextEditor` — `NSTextView` + custom `NSRulerView` gutter showing line numbers in monospaced-digit font. Replaces SwiftUI's `TextEditor`, which has no gutter and limited control over layout. Sets up the foundation for syntax highlighting in a future slice.
+- 5 MB per-file cap for in-app edits; larger files surface as "too large" with size shown. The cap is configurable in v0.9+.
 - Save-back uses Cmd+S or the toolbar button. Local writes are atomic; remote writes use SFTP `[.write, .create, .truncate]`.
 - **Lock-for-Editing model with multi-signal conflict detection** (mtime + size + SHA-256, plus git-aware diff in repos) is the v0.1-finalization layer for use against an active agent — see "Editing model" below. The current release ships with a Save / Discard pair and a "Modified" indicator; the lock + 3-way diff land before v0.1.0.
 - Real-time updates when files change on the remote (SFTP polling for v0.2; inotify-over-SSH bridge in v0.5+).

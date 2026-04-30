@@ -134,6 +134,13 @@ actor SSHService: RemoteFileService {
         }
     }
 
+    func runShellCommand(_ command: String) async throws -> String {
+        guard let client else { throw SSHServiceError.notConnected }
+        let buffer = try await client.executeCommand(command)
+        let bytes = buffer.getBytes(at: buffer.readerIndex, length: buffer.readableBytes) ?? []
+        return String(bytes: bytes, encoding: .utf8) ?? ""
+    }
+
     private static func makeAuthMethod(profile: HostProfile) throws -> SSHAuthenticationMethod {
         let expandedPath = (profile.privateKeyPath as NSString).expandingTildeInPath
         guard FileManager.default.isReadableFile(atPath: expandedPath),

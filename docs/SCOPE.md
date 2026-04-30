@@ -55,6 +55,17 @@ The file-browser header shows a segmented workspace picker when the host has 2+ 
 - Automatic, no upfront lock button — editing stays as easy as a normal text editor; the safety net only fires on actual drift.
 - After successful save, the baseline refreshes so subsequent saves compare against the just-saved state.
 
+### Cron management (v0.6.0 — implemented)
+Per-host **Cron** surface alongside Files. Reads `crontab -l`, parses into entries (preamble + schedule + command + comment), edits in a friendly picker, and writes back via `crontab <tmpfile>`.
+
+- Schedule picker has three modes: **Quick** (predefined patterns: every minute / every N minutes / hourly / daily / weekly / monthly / at reboot, with HH:MM and weekday/day pickers), **Custom (5 fields)** with live expression preview, and **Raw expression** for power users.
+- **Run now** button on the entry editor — executes the command immediately and captures combined stdout/stderr.
+- **History tab** parses the user's mail spool (`/var/mail/$USER`, fallback `/var/spool/mail/$USER`) — each cron run that produced output becomes an expandable record with timestamp + command + full output.
+- Validation runs before install: plausibility check on each field, empty-command detection, unknown-shorthand detection. Strict validation defers to `crontab` itself at install time.
+- Round-trips environment variables and standalone comments preserved exactly. Per-entry comments associated with the next entry on save.
+
+Re-introduced in v0.6.0 by user request after being cut at the v0.1.0 pivot. Distinct from Anthropic Scheduled Tasks (which manages Claude Code's own scheduled invocations) and ClawTab's cron (which manages agent-process schedules) — Rookery's cron manages the user's actual `crontab` for arbitrary scheduled commands. macOS launchd is **not** managed; cron only.
+
 ### Real-time updates (v0.5.0 — implemented, stretch deferred)
 - **Auto-refresh toggle** in the file browser. When on, polls `listDirectory` every 5 seconds via a `Task` loop tied to view lifecycle. Restarts on path change; cancels on disappear.
 - True inotify-over-SSH (server-side helper script streaming events) and live SQLite tail (WAL polling) are stretch features for after v1.0.
@@ -70,7 +81,8 @@ The file-browser header shows a segmented workspace picker when the host has 2+ 
 | Chat / prompting interface to the agent | claude.ai, claudecodeui, the agent's own TUI all do this well. |
 | General SSH terminal | Termius, Tabby, Warp own this. |
 | Agent runner / spawner / supervisor | ClawTab does this for local. We don't manage agent processes. |
-| Cron / launchd / scheduled-task management | Claude Code has its own scheduled tasks; ClawTab has cron. Diminishing return. |
+| ~~Cron management~~ | **Re-added in v0.6.0.** Anthropic Scheduled Tasks and ClawTab cover their own niches but neither is a portable cron manager for arbitrary user-installed jobs across local Mac and remote Linux. See "Cron management" section above. |
+| launchd integration on macOS | Cron works on macOS too; we use it uniformly for now. Editing `~/Library/LaunchAgents/*.plist` and `launchctl list` integration is a future stretch. |
 | Skill installer / marketplace | The agent ecosystem isn't standardized; this is a moving target. |
 | Cloud orchestration | No Kubernetes, no AWS console. |
 | Windows / Linux client | Mac-only. |

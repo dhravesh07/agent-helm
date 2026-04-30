@@ -1,51 +1,75 @@
 # Agent Helm — Version
 
-**Current:** `0.0.8` (XML support + line numbers + JSON Graph view)
+**Current:** `0.0.9` (workspaces, sleep/wake resilience, syntax highlighting, JSON graph polish)
 
 ## Changelog
 
+### 0.0.9 — 2026-04-30
+**Four big items, all delivered.**
+
+#### 1. Workspace paths refactor
+The single `HostProfile.rootPath: String` is gone. A host now has an ordered list of `Workspace { id, name, path }`. The user adds one workspace per area they want to inspect (Skills, project root, agent state, notes, …) — no path is hardcoded anywhere in the app.
+
+- New `Models/Workspace.swift`.
+- `HostProfile.workspaces: [Workspace]` (defaults to a single `Root` workspace at `~`).
+- Custom `Codable` migration: any v0.0.3–v0.0.8 stored profile that has only the legacy `rootPath` field decodes into a single workspace named `Root` with that path.
+- `HostFormView` gets a workspace editor (per-row name + path + folder picker for local + delete; Add button at the bottom). Minimum one workspace; can't delete the last one.
+- `FileBrowserView` shows a segmented workspace picker in the header when a host has 2+ workspaces. Switching workspaces resets the selected file and re-lists.
+- `HostListView` subtitle: shows the workspace path for single-workspace local hosts, or "N workspaces" otherwise.
+- `LocalFileService.connect` no longer pre-validates the configured root — the first `listDirectory` call surfaces a missing path with a clear error, so a missing one workspace doesn't block the others.
+
+#### 2. Sleep/wake reconnect resilience
+The app no longer lies about being connected after the laptop wakes from sleep.
+
+- New `ConnectionStatus` case: `.reconnecting`. Toolbar shows a spinner; the file browser shows a "Reconnecting after sleep/wake…" pane.
+- `SessionState` subscribes to `NSWorkspace.didWakeNotification` and `NSWorkspace.willSleepNotification`. On wake, remote sessions tear down and reconnect.
+- `NWPathMonitor` watches network path; when connectivity flips from unsatisfied → satisfied, remote sessions auto-reconnect (a clean transition, not on every WiFi roam).
+- New `SessionState.cancelLifecycleObservers()` for explicit teardown.
+- Local sessions are exempt from network-driven reconnects — but a missing path still surfaces on the next listing operation.
+
+#### 3. Syntax highlighting (regex-based, no JS runtime)
+Source-mode editor now colors keywords, strings, numbers, comments, and symbols. Pure Swift, no JavaScript runtime, no new SwiftPM dependency. Languages bundled: **Swift, Python, JavaScript/TypeScript, JSON, YAML, TOML, Shell, Ruby, Go, Rust** (10 specs, ~200 lines of `LanguageSpec` definitions).
+
+- New `Models/SyntaxHighlighter.swift` defines `SyntaxToken`, `SyntaxRule`, `LanguageSpec`, and a `SyntaxLanguages` registry mapping file extensions → spec.
+- `LineNumberedTextEditor` accepts a `languageSpec: LanguageSpec?`. On text-change, a 200ms debounced task re-applies foreground-color attributes via `NSTextStorage`'s edit transaction. Selection survives. The font is preserved across re-highlights.
+- Token colors use the system palette so they adapt to light/dark appearance.
+- Each rule is a precompiled `NSRegularExpression`; later rules win on overlap, so e.g. comments override "looks like a keyword inside a comment".
+
+#### 4. JSON graph: collapsible nodes + edit-in-place
+The Graph view in JSON files is now interactive.
+
+- Each node card has a chevron toggle. **Collapsed** = title-only header, no rows; subtree below is hidden in the layout. State lives in `JSONGraphView`'s `@State collapsedIds: Set<UUID>`.
+- Layout is recomputed each render against the current collapsed set; collapsed nodes shrink to a fixed height (32pt) and their children disappear.
+- **Scalar values are editable.** Double-click a string / number value → it becomes a `TextField`; commit (Enter or check button) writes the new value back through a structured JSON path.
+- **Booleans flip via a `Toggle`** — no edit mode, just click. Type-preserving: a number stays a number, a string stays a string. Failed parses keep the original.
+- Internally we now have a real `JSONValue` enum (object/array/string/number/integer/bool/null) with a recursive `setting(_:at:)` for path-based mutation, plus a serializer that round-trips back to pretty-printed JSON. The graph view binds the file's `editText`, so edits flow through the same `isDirty` / Save pipeline as any other text edit.
+- One known limitation: object key order isn't preserved through `JSONSerialization` parsing — round-tripped JSON has alphabetical keys. Documented as accepted v0.0.9 behavior; a streaming parser that preserves order is a future tweak.
+
+**State / model changes:**
+- `ConnectionStatus.reconnecting` (new case).
+- `HostProfile.workspaces: [Workspace]` (replaces `rootPath`); custom Codable migration.
+- `SessionState`: tracks `currentWorkspaceId`, exposes `currentWorkspace`, has `switchWorkspace(_:)` and `reconnect()`. Subscribes to NSWorkspace + NWPathMonitor.
+
 ### 0.0.8 — 2026-04-30
-**Three asks, all delivered:**
-
-1. **XML support.** New file kind covering `.xml`, `.plist`, `.xib`, `.storyboard`, `.rss`, `.atom`, `.svg`. Modes: **Preview / Source**. Preview pretty-prints via Foundation's `XMLDocument` with `[.nodePrettyPrint, .nodeCompactEmptyElement]`; falls back to raw text on parse failure. Edit happens in Source mode and writes the raw bytes back unchanged.
-
-2. **Line numbers in the source editor.** Replaced SwiftUI's `TextEditor` (no gutter, no layout-manager access) with `LineNumberedTextEditor` — an `NSViewRepresentable` wrapping `NSTextView` inside `NSScrollView` with a custom `NSRulerView` (`LineNumberRulerView`) drawing numbers in `monospacedDigitSystemFont`. Lazy redraw: gutter invalidates only on text-change and bounds-change notifications. Selection is preserved across `updateNSView` cycles. Auto-correction / smart-quotes / link-detection all disabled (these are wrong for source code). Find-bar enabled. Sets up the foundation for syntax highlighting later — that's a token-coloring layer on the same `NSTextView`.
-
-3. **JSON Graph view (jsoncrack-style).** New view mode for `.json` files: **Graph**. Native SwiftUI implementation, no JS / web-view:
-   - **Parse:** `JSONSerialization` → `JSONGraphNode` tree, where each node carries its inline scalar rows and its container children.
-   - **Layout:** hierarchical, left-to-right. Each node sits at the vertical center of its children's combined bounding box; subtrees stack vertically with a fixed gap. Node width is fixed (260 pt); height grows with row count.
-   - **Render:** ZStack of `JSONGraphNodeCard`s positioned via `.position()`, with a `Canvas` overlay drawing bezier-curve edges from a parent's container row to the child node's left edge.
-   - **Zoom:** floating control in the bottom-right (-/+/100%). 40%–200% range. Panning via the parent `ScrollView`.
-   - **Card design:** title bar (path component, accent-tinted), divider, then scalar rows with type-aware coloring (strings green, numbers orange, booleans purple, null gray, hex codes preserve their swatch in future), then container rows showing `key: {N keys}` / `key: [N items]` with a right-arrow indicator.
-   - **Modes for JSON:** **Graph / Pretty / Source** (graph is now the default).
-
-**File kind enum** gained `.xml`. **`FileViewMode`** gained `.graph` and `.formatted`. **`PreviewableFileKind.availableViewModes`** drives the segmented picker (per-kind, in display order). The picker auto-sizes to the number of available modes.
-
-**Files added:**
-- `Views/XMLPreviewView.swift`
-- `Views/LineNumberedTextEditor.swift` (+ `LineNumberRulerView` in the same file)
-- `Views/JSONGraphView.swift` (+ private parser, layout engine, and node-card view in the same file)
-
-**Files renamed/repurposed:**
-- `JSONPreviewView` is now the "Pretty" mode; the new "Graph" mode is the default for JSON.
+- XML support, line numbers, JSON Graph view (initial — read-only).
 
 ### 0.0.7 — 2026-04-30
-- MarkdownUI 2.4.1 for proper markdown rendering. Image preview (NSImage). PDF preview (PDFKit). JSON pretty-print. Per-file-kind dispatch.
+- MarkdownUI 2.4.1, image preview, PDF preview, JSON pretty-print.
 
 ### 0.0.6 — 2026-04-30
-- Read & edit any UTF-8 text file. Markdown Preview/Source toggle (rendering quality fixed in 0.0.7).
+- Read & edit any UTF-8 text file. Markdown Preview/Source toggle.
 
 ### 0.0.5 — 2026-04-30
-- Auto-connect on host selection. Architectural-review docs corrections.
+- Auto-connect on host selection.
 
 ### 0.0.4 — 2026-04-30
 - Local-Mac connection kind alongside remote SSH.
 
 ### 0.0.3 — 2026-04-30
-- First functional slice. SSH connect (ed25519 / RSA), SFTP file tree, markdown viewer.
+- First functional slice.
 
 ### 0.0.2 — 2026-04-30
-- Xcode project via xcodegen, Makefile, entitlements.
+- Xcode project via xcodegen.
 
 ### 0.0.1 — 2026-04-30
 - Initial scaffold.

@@ -6,12 +6,13 @@
 
 Local-first, with optional SSH for remote agents on Linux servers. Cross-vendor (Claude Code, Aider, OpenCode, OpenClaude, Continue, Cline). It's a **state inspector**, not a chat surface, not an SSH terminal, not an agent runner.
 
-**Status:** v0.5.0 — feature-complete for the inspector use case.
+**Status:** v0.6.0 — feature-complete for the inspector + cron use cases.
 
 - SSH + local browsing, per-host workspaces, auto-connect, sleep/wake reconnect, **auto-refresh polling toggle**.
 - Markdown render (MarkdownUI), **JSON: Graph (collapsible + edit-in-place) / Pretty / Source**, XML pretty-print, image + PDF preview.
 - **SQLite inspector** with Tables / Schema / Query modes, paginated grid, read-only SQL runner.
 - **JSONL transcript viewer** with one-row-per-message, role-colored badges, expand-to-detail, live search.
+- **Cron management** — Files / Cron surface picker; CRUD with Quick / Custom / Raw schedule picker; run-now; mail-spool run-history viewer.
 - Line-numbered source editor with syntax highlighting for 11 languages.
 - Save / Discard / Cmd+S, **save-conflict detection** (size + mtime + SHA-256 baseline; alert with Reload / Overwrite if the remote drifted).
 - **Onboarding presets** for Claude Code / Aider / OpenCode / OpenClaude / Continue / Cline / Codex.

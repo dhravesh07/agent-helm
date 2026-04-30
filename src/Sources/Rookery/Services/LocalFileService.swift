@@ -102,6 +102,39 @@ actor LocalFileService: RemoteFileService {
         }
     }
 
+    func runShellCommand(_ command: String) async throws -> String {
+        try await Task.detached(priority: .userInitiated) {
+            let process = Process()
+            process.executableURL = URL(fileURLWithPath: "/bin/sh")
+            process.arguments = ["-c", command]
+            let stdout = Pipe()
+            let stderr = Pipe()
+            process.standardOutput = stdout
+            process.standardError = stderr
+            do {
+                try process.run()
+            } catch {
+                throw LocalFileServiceError.readFailed(
+                    path: command,
+                    underlying: "Could not launch /bin/sh: \(error.localizedDescription)"
+                )
+            }
+            process.waitUntilExit()
+            let outData = stdout.fileHandleForReading.readDataToEndOfFile()
+            let errData = stderr.fileHandleForReading.readDataToEndOfFile()
+            let outStr = String(data: outData, encoding: .utf8) ?? ""
+            let errStr = String(data: errData, encoding: .utf8) ?? ""
+            if process.terminationStatus != 0 {
+                let combined = errStr.isEmpty ? outStr : errStr
+                throw LocalFileServiceError.readFailed(
+                    path: command,
+                    underlying: "Exit \(process.terminationStatus): \(combined)"
+                )
+            }
+            return outStr
+        }.value
+    }
+
     private static func expand(_ path: String) -> String {
         (path as NSString).expandingTildeInPath
     }

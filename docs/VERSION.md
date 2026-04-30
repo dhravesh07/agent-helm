@@ -1,8 +1,45 @@
 # Rookery — Version
 
-**Current:** `0.5.0` (JSONL transcripts + onboarding presets + save-conflict detection + auto-refresh)
+**Current:** `0.6.0` (cron management — back in scope by user request)
 
 ## Changelog
+
+### 0.6.0 — 2026-04-30
+**Cron CRUD + run history.** User decided to bring cron management back in scope after the v0.1.0 pivot had explicitly cut it. Re-evaluated: while Anthropic Scheduled Tasks and ClawTab cover their own niches, neither is a portable cron manager for arbitrary user-installed cron jobs across local Mac and remote Linux. Different scope, complementary.
+
+#### Surface picker
+The host pane now has a **Files / Cron** segmented picker in the toolbar. Switching is instant; both surfaces share the same connection. Cron data lazy-loads on first switch.
+
+#### Cron entries (CRUD)
+- New `Models/CronEntry.swift` — `CronEntry` (id, schedule, command, comment) + `CronSchedule` enum with `.standard(minute:hour:dom:month:dow:)`, `.shorthand(...)` for `@daily`/`@hourly`/etc., and `.raw(...)` fallback. Smart `summary` getter detects common patterns ("Every day at 09:30", "Every 5 minutes", "Every week on Monday at 14:00", etc.).
+- New `Models/CronParser.swift` — parses `crontab -l` output into preamble (env vars + standalone comments) and entries. Round-trips unchanged: standalone comments + env vars are preserved on save.
+- New `Services/CronService.swift` — façade over `RemoteFileService`. List, save (write to `/tmp/rookery-crontab-<uuid>` via SFTP, then `crontab <tmp>`, then cleanup), validate, run-now (`{ command ; } 2>&1`), and read mail spool.
+- New `Models/CronState.swift` — `@Observable` per-session cron data: tab, preamble, entries, selection, status, dirty flag, validation problems.
+- `SessionState` gains `cron: CronState` + methods: `loadCron`, `saveCron`, `runCronNow`, `loadCronHistory`, `addCronEntry`, `deleteCronEntry`, `updateCronEntry`.
+
+#### Friendly schedule picker
+- New `Views/CronEntryEditor.swift` with three modes:
+  - **Quick**: predefined kinds — every minute / every N minutes (stepper) / every hour / every day (HH:MM picker) / every week (weekday + HH:MM) / every month (day + HH:MM) / at reboot. Hydrates from any parsed schedule that matches a known pattern.
+  - **Custom (5 fields)**: minute / hour / day-of-month / month / day-of-week TextFields with inline hints and a live "Resulting expression" preview.
+  - **Raw expression**: free-text TextField for power users; accepts shorthands and arbitrary cron syntax.
+- Command + comment fields below the schedule picker. Multi-line command support.
+- **Run now** button + result pane that captures combined stdout/stderr.
+
+#### Cron view
+- New `Views/CronView.swift`. Two-tab layout (**Entries** / **History**) controlled by `CronTab` enum.
+- Entries tab: `HSplitView` with sidebar (validation banner + entries list with schedule summary + command monospaced + optional comment) and editor pane on the right. Add / Delete / Reload / Install crontab (⌘S) buttons.
+- History tab: parses `/var/mail/$USER` (or `/var/spool/mail/$USER` fallback) via the new `CronHistoryParser`. Each cron run-with-output becomes a `CronRunRecord` (timestamp, command, output) — listed newest-first with `DisclosureGroup` to expand the full captured output.
+- Save flow runs validation first (empty commands, plausibility check on each field, unknown shorthands); errors surface in the validation banner instead of going through to the server.
+
+#### Plumbing
+- New `runShellCommand(_:)` requirement on `RemoteFileService`. `LocalFileService` implements it via `Process` with `/bin/sh -c`; `SSHService` implements it via Citadel's `executeCommand`.
+- ContentView dispatches the content pane based on `session.surface`. The detail pane is empty for cron (single-pane surface).
+- Project version: 0.5.0 → 0.6.0; CURRENT_PROJECT_VERSION 50 → 60.
+
+#### Known limitations
+- macOS local: `crontab` works on macOS but `launchd` is the more idiomatic scheduler. Rookery uses `crontab` for both kinds for now; launchd integration (`launchctl list`, `~/Library/LaunchAgents/*.plist` editor) is a future stretch.
+- History parsing depends on cron writing to the user's mail spool. If `MAILTO` is unset or mail isn't configured, the History tab will be empty — documented in the empty-state copy. Custom log-file parsers can be added later.
+- Validation is loose at the field level. Strict server-side validation happens at install time when `crontab <file>` rejects the input; that error surfaces in the save-status label.
 
 ### 0.5.0 — 2026-04-30
 **Three roadmap milestones in one ship**, covering the full v0.3 / v0.4 / v0.5 spans of the original ROADMAP. Rookery's read-and-tweak loop is now feature-complete for the inspector use case.

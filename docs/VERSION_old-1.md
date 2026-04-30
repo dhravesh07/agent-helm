@@ -1,8 +1,29 @@
 # Rookery — Version
 
-**Current:** `0.1.0` (Rookery — rename + direction pivot)
+**Current:** `0.2.0` (SQLite inspector — the headline)
 
 ## Changelog
+
+### 0.2.0 — 2026-04-30
+**SQLite inspector for agent state.** The flagship feature for the post-pivot direction.
+
+- New `PreviewableFileKind.sqlite` for `.db`, `.sqlite`, `.sqlite3`, `.db3`. JSONL also recognized as `.jsonl` / `.ndjson` (viewer ships in v0.3.0).
+- Three view modes for SQLite: **Tables / Schema / Query**. Picker auto-shows in the file editor header.
+- New `Services/SQLiteService.swift` — actor wrapping [GRDB.swift 7.10](https://github.com/groue/GRDB.swift) with `Configuration.readonly = true`. Read-only at the connection level, AND the query runner refuses anything that isn't `SELECT` / `WITH` / `PRAGMA` / `EXPLAIN`.
+- New `Models/SQLiteSchema.swift` — `SQLiteTable`, `SQLiteColumn`, `SQLiteRow`, `SQLiteResultSet` value types.
+- New `Views/SQLiteBrowserView.swift`:
+  - **Tables mode**: `HSplitView` with table sidebar (name + row count) and main pane showing table metadata + paginated data grid (50 rows per page) + page controls.
+  - **Schema mode**: column list with primary-key indicator, type, NOT NULL / DEFAULT constraints; full `CREATE` statement below.
+  - **Query mode**: line-numbered SQL editor (`LineNumberedTextEditor` with new SQL syntax-highlighting language spec) on top, results grid below in a `VSplitView`. ⌘↩ runs the query. Up to 1000 rows, truncation indicator if exceeded.
+- `SessionState.openSQLite` handles file opening: local files open directly; remote files SFTP-download to `~/Library/Caches/Rookery/<host>-<hash>.db` and open from there. New `maxSQLiteSize = 200 MB` cap (separate from the 5 MB text-edit cap).
+- `FileBufferState.sqlite(localPath: URL, size: UInt64)` new case; `FileEditorView` dispatches to `SQLiteBrowserView` for it.
+- Added SQL to `SyntaxLanguages` (case-insensitive keyword matching for SELECT/FROM/WHERE/JOIN/etc.).
+- `RookeryTests`: build still passes via `xcodebuild test`.
+
+#### Known limitations (deferred)
+- BLOBs surface as `<blob N bytes>` strings; full hex dump / image preview is a future tweak.
+- Remote DB refresh is manual via the table refresh button — re-fetches the whole file. Live tail (poll + WAL) is v0.5.
+- Agent-schema awareness (Claude Code session-DB layouts, Aider chat history, OpenCode stores) — registry skeleton is in place; specific schema templates land as we verify each agent's actual file layout against a real installation.
 
 ### 0.1.0 — 2026-04-30
 **Project rename and direction pivot.** Was: "Agent Helm — Mac-native control plane for AI coding agents." Now: **"Rookery — Mac-native inspector for AI coding agent state."**

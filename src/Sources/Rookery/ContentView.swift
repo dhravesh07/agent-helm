@@ -17,10 +17,20 @@ struct ContentView: View {
                 .frame(minWidth: 220)
         } content: {
             if let session = currentSession {
-                FileBrowserView(session: session)
-                    .navigationTitle(session.profile.name)
-                    .toolbar { connectionToolbar(session: session) }
-                    .frame(minWidth: 320)
+                Group {
+                    switch session.surface {
+                    case .files:
+                        FileBrowserView(session: session)
+                    case .cron:
+                        CronView(session: session)
+                    }
+                }
+                .navigationTitle(session.profile.name)
+                .toolbar {
+                    surfaceToolbar(session: session)
+                    connectionToolbar(session: session)
+                }
+                .frame(minWidth: session.surface == .cron ? 720 : 320)
             } else {
                 Text("Select or add a host")
                     .foregroundStyle(.secondary)
@@ -28,7 +38,12 @@ struct ContentView: View {
             }
         } detail: {
             if let session = currentSession {
-                FileEditorView(session: session)
+                switch session.surface {
+                case .files:
+                    FileEditorView(session: session)
+                case .cron:
+                    EmptyView()  // cron is a single-pane surface
+                }
             } else {
                 welcome
             }
@@ -59,6 +74,21 @@ struct ContentView: View {
             Task { await session.connect() }
         case .connecting, .connected, .reconnecting, .failed:
             break
+        }
+    }
+
+    @ToolbarContentBuilder
+    private func surfaceToolbar(session: SessionState) -> some ToolbarContent {
+        ToolbarItem(placement: .principal) {
+            Picker("Surface", selection: Bindable(session).surface) {
+                ForEach(HostSurface.allCases) { surface in
+                    Label(surface.label, systemImage: surface.systemImage).tag(surface)
+                }
+            }
+            .pickerStyle(.segmented)
+            .labelsHidden()
+            .frame(width: 180)
+            .disabled(session.status != .connected)
         }
     }
 

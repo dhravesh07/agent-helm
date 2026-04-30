@@ -2,45 +2,46 @@
 
 ## Target users
 
-**Primary:** developers running an AI coding agent (Claude Code, OpenClaude, OpenCode, Aider) on their own Linux server — VPS, home lab, workstation, or dedicated box — and using a Mac as their daily driver.
+**Primary:** developers running AI coding agents (Claude Code, OpenClaude, OpenCode, Aider, Continue, Cline) on their **own Mac**, who want a structured way to inspect what those agents have been writing — markdown configs, JSON sessions, SQLite memory, JSONL transcripts.
 
-**Also primary (v0.0.4+):** developers running the same agents directly on their Mac. Rookery in **Local** mode points at a folder (e.g., `~/.claude`) and surfaces the same operator views (md files, soon: SQLite, cron) without any SSH plumbing.
+**Secondary:** the same developers, with the agent on a **remote Linux server** (VPS, home lab, workstation), inspecting from their Mac via SSH.
 
-**Secondary:** AI/ML researchers running long-lived agent processes on a remote workstation and needing a low-friction way to inspect what the agent is doing without a full SSH session.
-
-**Not the target:** people who only use a fully hosted product (Claude.ai, Devin, Replit Agents) and have no local or self-hosted agent state to inspect.
+**Not the target:**
+- People who only use a fully hosted agent (claude.ai web, Devin, Replit Agents) — there's no on-disk state to read.
+- People who want to **prompt** the agent from a Mac UI — claude.ai/code, the Claude app, claudecodeui already cover that surface.
+- People who want to **run / spawn / supervise** the agent — ClawTab and Anthropic Desktop are better tools for that.
 
 ## Primary use cases
 
-### UC-0 — Browse a local Claude Code setup
-*Casey runs Claude Code on her Mac, with `~/.claude/skills/`, `~/.claude/projects/...`, and a few CLAUDE.md files scattered across repos. She adds a Local host pointing at `~/.claude`, and another at her active project root. Same browser, same viewer, no SSH. Useful even when there's no remote box.*
+### UC-1 — "What does Claude Code remember about this project?"
+*Casey wants to see the session memory Claude Code has built up across yesterday's coding session. Today: dig into `~/.claude/projects/.../` and read JSONL transcripts in `cat | jq`. With Rookery: open the project workspace, see the session DB tables side-by-side with the transcript, click a message to see the tool call and response inline.*
 
-### UC-1 — Live-edit a CLAUDE.md from the Mac
-*Sam runs Claude Code on a $40/mo VPS. They want to tweak the project's `CLAUDE.md` to refine the agent's behavior. Today: SSH, vim, save, hope. With Rookery: open the file in a real editor, with preview, save in one click. Total time: 30 seconds vs. 3 minutes.*
+### UC-2 — "Why did Aider rewrite this file last night?"
+*Priya runs Aider as a daemon. The next morning she finds a file edited and wants to understand why. Today: `git diff` for the what, then nothing for the why (Aider's reasoning lives in `.aider.chat.history.md` per project). With Rookery: open the project workspace, scroll the chat history with proper rendering, find the prompt and reasoning that produced the edit.*
 
-### UC-2 — Inspect agent memory mid-run
-*Priya is running a long-form coding task and wants to know what the agent has learned so far. The agent stores transcript and memory in a SQLite file. With Rookery: open the DB, browse the `memories` table, see exactly what's in there. No `sqlite3` CLI gymnastics.*
+### UC-3 — "Tweak a CLAUDE.md skill in place"
+*Marco has 12 skills in `~/.claude/skills/`. He wants to refine one quickly. Today: open VS Code, navigate to the file, edit, save. With Rookery: rookery, sidebar → Skills workspace → file → edit → ⌘S. One window. Designed for the inspect-and-tweak loop, not the multi-file IDE workflow.*
 
-### UC-3 — Schedule a nightly skill run
-*Marco wants his agent to refresh a research dataset every night at 2am. With Rookery: open the Cron tab, pick a schedule from the dropdown, paste the command, save. View tomorrow's run output the next morning.*
+### UC-4 — "Inspect agent SQLite memory"
+*Lin's agent stores rolling memory in SQLite. She wants to see if a particular fact was retained. Today: open TablePlus, configure a connection, find the right table, write a SELECT, decode JSON-in-a-cell. With Rookery (v0.2): open the .db file inline, see the table list in agent-schema-aware order (sessions / messages / memory before SQLite internals), expand a row to see the JSON payload pretty-printed.*
 
-### UC-4 — Install a community skill
-*Lin downloads a `pdf-extract.skill` from a community repo. With Rookery: drag-drop into the Skills pane on her server profile; the app SFTPs it to `~/.claude/skills/pdf-extract/` and confirms the install. The next agent run picks it up.*
+### UC-5 — "Browse a remote Claude Code session from my Mac"
+*Daniel runs Claude Code on a $40 VPS. He wants to peek at what it's been doing without SSHing into a terminal. Today: `ssh box && cd ~/.claude && cat`. With Rookery: add a remote host with a workspace path at `~/.claude`, browse the session tree, open files, edit configs, save back over SFTP.*
 
-### UC-5 — Spawn a one-off agent for a task
-*Daniel wants to kick off a refactoring agent on the server without opening a terminal. With Rookery: hit "New Agent", paste the task into a prompt box, click run. The app spawns a `tmux` session, streams output back to the Mac.*
-
-### UC-6 — Manage three servers at once
-*Eli runs experiments across three boxes. With Rookery: a sidebar of host profiles, click to switch, see each box's recent file changes and cron history side-by-side.*
+### UC-6 — "Multiple agents, one inspector"
+*Eli uses Claude Code on the laptop, Aider on a server, and OpenCode on a workstation. Each has its own state layout. With Rookery: three host profiles, switch between them, read each one's records in the same UI. Cross-vendor by design.*
 
 ## Anti-use-cases (explicit)
 
-- **"I want Rookery to run an agent for me."** → It doesn't. Run Claude Code (or whatever) yourself; Rookery is the operator surface around the agent's state. Local mode just means we read the same files from the same Mac you ran the agent on.
-- **"I want a general SSH terminal."** → Use Termius, Tabby, or iTerm2.
-- **"I want to manage agents across a fleet of cloud-managed VMs."** → Rookery scales to ~10 hosts. For 100+, use proper cloud orchestration.
-- **"I want a web dashboard."** → Rookery is a native Mac app, not a hosted UI. (LangSmith, AgentOps cover the hosted-dashboard space.)
+- **"I want to chat with my agent from a Mac UI."** → claude.ai, [claudecodeui](https://github.com/siteboon/claudecodeui), Claude Desktop. Rookery doesn't render a chat surface.
+- **"I want to start / stop / supervise my agent."** → [ClawTab](https://clawtab.cc) or [claudia](https://github.com/getAsterisk/claudia). Rookery doesn't manage agent processes.
+- **"I want to schedule the agent to run every hour."** → Claude Code's `/loop` and Desktop Scheduled Tasks; ClawTab's cron. Rookery doesn't manage schedules.
+- **"I want a general SSH terminal."** → Termius, Tabby, iTerm2.
+- **"I want a general SQL client."** → TablePlus, Beekeeper Studio. Rookery's DB browser is opinionated about agent schemas, not a full SQL workbench.
 
 ## Success signals
-- A user can connect, edit a remote `.md`, and see the change reflected in <60 seconds from app launch.
-- A user has zero need to open a terminal for the canonical happy-path tasks above.
-- A user can manage 3+ hosts without confusion about which one they're acting on.
+
+- A user can open Rookery and find what the agent has been writing within 60 seconds of first launch.
+- A user can navigate from "vague unease about what the agent did" to "specific evidence" without leaving the app.
+- A user uses Rookery alongside, not instead of, their primary editor — it's the inspector tab, not the workspace.
+- The DB browser surfaces Claude Code's session-DB layout meaningfully on first open, without the user configuring schemas.

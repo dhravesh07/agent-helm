@@ -1,19 +1,29 @@
 # Agent Helm — Version
 
-**Current:** `0.0.4` (pre-release — local + remote browsing)
+**Current:** `0.0.5` (auto-connect on selection + scope/roadmap corrections)
 
 ## Changelog
 
+### 0.0.5 — 2026-04-30
+- **Fix:** local hosts now auto-connect on selection. Previously the file browser showed "Not connected" until the user clicked the lightning-bolt toolbar button — actively confusing for local hosts where there's nothing to "connect" to. ContentView now triggers `session.connect()` from `.onChange(of: selectedHostId, initial: true)` whenever a session is in `.disconnected` state. Failed sessions are not auto-retried; the user retries explicitly so we don't loop on a bad config. (Triggered by user feedback that v0.0.4 "doesn't work" — it built and ran fine, but the UX was wrong.)
+- **Docs corrections from architectural review** (rotated per CLAUDE.md):
+  - `SCOPE.md` — five corrections:
+    1. Removed tmux as the assumed default supervisor; introduced **supervisor profiles** (tmux / screen / systemd-run / nohup / `&`), user-selectable per host.
+    2. Replaced single `rootPath` framing with **Workspace paths** abstraction (per-host ordered list of named paths). Discovery presets exist but no path is hardcoded — Aider's `.aider*` lives per-project, not in a home dir.
+    3. Added **Editing model** section: files read-only by default, explicit Lock for Editing with mtime + size + SHA-256 + git-status integrity baseline; the multi-signal check is the real guarantee, not mtime alone.
+    4. Added **Connection lifecycle (resilience)** section: `NSWorkspace` sleep/wake + `NWPathMonitor` requirements; never let the UI lie about connection state.
+    5. Skill / agent lifecycle expanded with **Stop / Uninstall / Prune** — operator hygiene, not a v1.0 afterthought.
+  - `ROADMAP.md` — restructured to reflect the corrections:
+    - v0.1 expanded with workspace-paths and lock-for-editing as explicit gates.
+    - v0.2 P0 is now connection-resilience hardening (sleep/wake) — currently broken in v0.0.4.
+    - v0.3 calls out supervisor profiles explicitly; adds Stop and Uninstall.
+    - v0.4 adds resource pruning UI (disk-use + one-click prune for transcripts / WAL).
+
 ### 0.0.4 — 2026-04-30
-- **Local-Mac connection kind.** A host can now point at a folder on the current Mac (e.g., `~/.claude`, an `openclaude` directory, any project root). Same browser, same markdown viewer, no SSH.
-- New `RemoteFileService` protocol abstracts the filesystem layer:
-  - `SSHService` (existing) handles remote SFTP via Citadel.
-  - `LocalFileService` (new actor) handles local browsing via `FileManager`.
-  - `SessionState` picks the right backend based on `HostProfile.kind`.
-- `HostProfile.kind` (`.local` / `.remote`) stored alongside the existing fields. v0.0.3 profiles decode cleanly — missing `kind` defaults to `.remote`.
-- Add Host form gets a segmented kind picker; remote-only fields hide for local. Folder-picker button for local hosts.
-- Sidebar shows a kind icon (`macbook` / `server.rack`) + a context-appropriate subtitle (folder path for local, `user@host:port` for remote).
-- Connection toolbar relabels to "Open / Close" for local hosts, "Connect / Disconnect" for remote.
+- Local-Mac connection kind alongside remote SSH.
+- `RemoteFileService` protocol; `LocalFileService` actor backed by `FileManager`.
+- `HostProfile.kind` field (defaults to `.remote` so v0.0.3 stored profiles decode cleanly).
+- Form/list UI conditional on kind; folder picker for local roots.
 
 ### 0.0.3 — 2026-04-30
 - First functional slice. SSH connect (OpenSSH ed25519 / RSA), SFTP file tree, markdown viewer.

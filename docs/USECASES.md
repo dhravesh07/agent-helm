@@ -28,7 +28,13 @@
 ### UC-5 — "Browse a remote Claude Code session from my Mac"
 *Daniel runs Claude Code on a $40 VPS. He wants to peek at what it's been doing without SSHing into a terminal. Today: `ssh box && cd ~/.claude && cat`. With Rookery: add a remote host with a workspace path at `~/.claude`, browse the session tree, open files, edit configs, save back over SFTP.*
 
-### UC-6 — "Multiple agents, one inspector"
+### UC-6a — "Schedule a nightly skill run"
+*Marco wants his agent to refresh a research dataset every night at 2am via a wrapper script. Today: SSH, `crontab -e`, vim, hope the syntax is right. With Rookery (v0.6.0): switch to the Cron surface, click Add, pick **Quick → Every day at 02:00**, paste the command, click Install crontab. Run-Now button to verify the command works before scheduling.*
+
+### UC-6b — "Why did last night's cron fail?"
+*Lin's nightly job ran but produced unexpected output. Today: `ssh box && cat /var/mail/$USER` and squint. With Rookery: switch to Cron, click the History tab, find last night's run (newest-first), expand to see the full captured stdout/stderr.*
+
+### UC-7 — "Multiple agents, one inspector"
 *Eli uses Claude Code on the laptop, Aider on a server, and OpenCode on a workstation. Each has its own state layout. With Rookery: three host profiles, switch between them, read each one's records in the same UI. Cross-vendor by design.*
 
 ## Anti-use-cases (explicit)

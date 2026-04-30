@@ -33,6 +33,13 @@ final class SessionState {
     var openBaseline: EditLockBaseline?
     var pendingConflict: SaveConflict?
 
+    /// Active surface for this host (Files / Cron). Switching is instant —
+    /// data for each surface is cached on the SessionState.
+    var surface: HostSurface = .files
+    var cron: CronState = CronState()
+
+    var cronService: CronService { CronService(service: service) }
+
     var isDirty: Bool {
         guard case .text(let original) = bufferState else { return false }
         return editText != original
@@ -346,6 +353,91 @@ final class SessionState {
         if let entry = selectedFile {
             await openFile(entry)
         }
+    }
+
+    // MARK: - Cron
+
+    func loadCron() async {
+        guard case .connected = status else { return }
+        cron.status = .loading
+        do {
+            let result = try await cronService.listEntries()
+            cron.preamble = result.preamble
+            cron.entries = result.entries
+            cron.selectedEntryId = result.entries.first?.id
+            cron.status = .loaded
+            cron.dirty = false
+            cron.validationProblems = CronService.validate(result.entries)
+        } catch {
+            cron.status = .failed(error.localizedDescription)
+        }
+    }
+
+    func saveCron() async {
+        guard case .connected = status else { return }
+        cron.validationProblems = CronService.validate(cron.entries)
+        guard cron.validationProblems.isEmpty else {
+            cron.saveStatus = .failed(message: "Validation errors — fix them first.")
+            return
+        }
+        cron.saveStatus = .saving
+        do {
+            try await cronService.save(preamble: cron.preamble, entries: cron.entries)
+            cron.saveStatus = .saved(at: Date())
+            cron.dirty = false
+            // Refresh from server so any normalization is reflected.
+            await loadCron()
+        } catch {
+            cron.saveStatus = .failed(message: error.localizedDescription)
+        }
+    }
+
+    func runCronNow(_ entry: CronEntry) async {
+        guard case .connected = status else { return }
+        cron.runNowEntryId = entry.id
+        cron.runNowResult = "Running…"
+        do {
+            let output = try await cronService.runNow(entry)
+            cron.runNowResult = output.isEmpty ? "(no output)" : output
+        } catch {
+            cron.runNowResult = "Error: \(error.localizedDescription)"
+        }
+    }
+
+    func loadCronHistory() async {
+        guard case .connected = status else { return }
+        cron.historyStatus = .loading
+        do {
+            cron.history = try await cronService.readRunHistory()
+            cron.historyStatus = .loaded
+        } catch {
+            cron.historyStatus = .failed(error.localizedDescription)
+        }
+    }
+
+    func addCronEntry() {
+        let new = CronEntry(
+            schedule: .standard(minute: "0", hour: "*", dom: "*", month: "*", dow: "*"),
+            command: "echo hello"
+        )
+        cron.entries.append(new)
+        cron.selectedEntryId = new.id
+        cron.dirty = true
+    }
+
+    func deleteCronEntry(id: CronEntry.ID) {
+        cron.entries.removeAll { $0.id == id }
+        if cron.selectedEntryId == id {
+            cron.selectedEntryId = cron.entries.first?.id
+        }
+        cron.dirty = true
+    }
+
+    func updateCronEntry(_ updated: CronEntry) {
+        guard let idx = cron.entries.firstIndex(where: { $0.id == updated.id }) else { return }
+        cron.entries[idx] = updated
+        cron.dirty = true
+        cron.validationProblems = CronService.validate(cron.entries)
     }
 
     // MARK: - System lifecycle (sleep/wake, network)

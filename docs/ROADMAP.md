@@ -64,13 +64,26 @@ The headline feature for the new direction. Mac-native, opinionated about known 
 - Cross-host search ("find this string anywhere across all my agent state").
 - Native iPad client for read-only inspection on the couch.
 
+## v0.6.0 — Cron CRUD + run history ✓ shipped (re-added by user request)
+
+Was originally cut at the v0.1.0 pivot. User asked for it back; re-evaluated and concluded the niche is distinct from Anthropic Scheduled Tasks (Claude Code-internal) and ClawTab's cron (agent-process schedules). Rookery's cron manages the user's actual `crontab` for arbitrary scheduled commands across local Mac and remote Linux.
+
+- [x] Files / Cron surface picker per host.
+- [x] Read crontab via `crontab -l`, parse into preamble + entries with comments.
+- [x] Three-mode schedule picker: Quick / Custom (5 fields) / Raw expression.
+- [x] Friendly Quick presets: every minute / every N min / hourly / daily / weekly / monthly / at reboot.
+- [x] Run-now button + captured output.
+- [x] Save via `crontab <tmpfile>`. Validation runs first (plausibility + empty-command); strict validation defers to crontab itself.
+- [x] History tab parses the user's mail spool for past runs.
+- [ ] Custom log-file parsers for jobs that route output elsewhere — future.
+- [ ] launchd integration on macOS — future stretch.
+
 ## Explicitly NOT on the roadmap
 
 These were on the v0.x roadmap under the "Agent Helm — control plane" framing and have been removed under the Rookery direction:
 
 - ~~Skill installer / uninstaller~~ — agent ecosystem isn't standardized; this is a moving target. ClawTab covers part of it for Claude.
 - ~~Agent process supervisor (start/stop/tail)~~ — ClawTab and Claude Code Desktop own this.
-- ~~Cron management~~ — Claude Code has scheduled tasks; ClawTab has cron.
 - ~~"Control plane" framing in general~~ — too crowded, wrong posture.
 
 If any of these come back, it'll be under a clear shift in market conditions, documented in MOAT.md.
