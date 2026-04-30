@@ -408,7 +408,9 @@ final class SessionState {
         guard case .connected = status else { return }
         cron.historyStatus = .loading
         do {
-            cron.history = try await cronService.readRunHistory()
+            let result = try await cronService.readRunHistory(hostKind: profile.kind)
+            cron.history = result.records
+            cron.historyDiagnostics = result.diagnostics
             cron.historyStatus = .loaded
         } catch {
             cron.historyStatus = .failed(error.localizedDescription)

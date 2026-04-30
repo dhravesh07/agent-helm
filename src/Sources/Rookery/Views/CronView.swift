@@ -250,20 +250,13 @@ private struct CronHistoryPane: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         case .loaded:
             if session.cron.history.isEmpty {
-                VStack(spacing: 8) {
-                    Image(systemName: "tray")
-                        .font(.largeTitle)
-                        .foregroundStyle(.tertiary)
-                    Text("No run history found in /var/mail/$USER")
-                        .foregroundStyle(.secondary)
-                    Text("Cron only writes to the mail spool when a job produces stdout/stderr.")
-                        .font(.caption)
-                        .foregroundStyle(.tertiary)
-                        .multilineTextAlignment(.center)
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                emptyStateWithDiagnostics
             } else {
-                List(session.cron.history) { record in
+                VStack(spacing: 0) {
+                    if !session.cron.historyDiagnostics.isEmpty {
+                        diagnosticsBanner
+                    }
+                    List(session.cron.history) { record in
                     DisclosureGroup {
                         Text(record.output)
                             .font(.system(.caption, design: .monospaced))
@@ -292,8 +285,106 @@ private struct CronHistoryPane: View {
                             }
                         }
                     }
+                    }
                 }
             }
         }
+    }
+
+    private var diagnosticsBanner: some View {
+        DisclosureGroup {
+            VStack(alignment: .leading, spacing: 6) {
+                ForEach(session.cron.historyDiagnostics) { diag in
+                    diagnosticRow(diag)
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: "stethoscope")
+                Text("Diagnostics (\(session.cron.historyDiagnostics.count))")
+                    .font(.caption.bold())
+            }
+            .foregroundStyle(.secondary)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+        }
+        .background(Color.secondary.opacity(0.06))
+    }
+
+    private var emptyStateWithDiagnostics: some View {
+        VStack(spacing: 12) {
+            VStack(spacing: 6) {
+                Image(systemName: "tray")
+                    .font(.largeTitle)
+                    .foregroundStyle(.tertiary)
+                Text("No run history found")
+                    .font(.headline)
+                Text("Cron writes to the mail spool only when a job produces output AND `MAILTO` is set AND a working MTA is installed. Most macOS systems don't have one.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 32)
+            }
+
+            if !session.cron.historyDiagnostics.isEmpty {
+                Divider().padding(.horizontal, 32)
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("What we checked")
+                            .font(.caption.bold())
+                            .foregroundStyle(.secondary)
+                        ForEach(session.cron.historyDiagnostics) { diag in
+                            diagnosticRow(diag)
+                        }
+                        suggestionPane
+                    }
+                    .padding(.horizontal, 24)
+                    .padding(.vertical, 12)
+                    .frame(maxWidth: 600)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private func diagnosticRow(_ diag: CronDiagnostic) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+            Image(systemName: diag.severity.systemImage)
+                .foregroundStyle(diagColor(diag.severity))
+                .font(.caption)
+                .frame(width: 16)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(diag.title)
+                    .font(.caption.bold())
+                Text(diag.detail)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+
+    private func diagColor(_ severity: CronDiagnostic.Severity) -> Color {
+        switch severity {
+        case .info: return .blue
+        case .warn: return .orange
+        case .error: return .red
+        }
+    }
+
+    private var suggestionPane: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Divider()
+            Text("Want to capture output anyway?")
+                .font(.caption.bold())
+                .foregroundStyle(.secondary)
+            Text("Append `>> /tmp/cron-mycommand.log 2>&1` to your command, then `cat /tmp/cron-mycommand.log` from the Files surface to see what the job wrote. A built-in capture-to-file toggle is on the roadmap.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(.top, 6)
     }
 }

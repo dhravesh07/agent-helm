@@ -71,6 +71,7 @@ final class CronState {
     // History
     var history: [CronRunRecord] = []
     var historyStatus: CronLoadStatus = .idle
+    var historyDiagnostics: [CronDiagnostic] = []
 
     func reset() {
         tab = .entries
@@ -85,5 +86,6 @@ final class CronState {
         runNowEntryId = nil
         history = []
         historyStatus = .idle
+        historyDiagnostics = []
     }
 }

@@ -20,6 +20,51 @@ struct CronRunRecord: Identifiable, Hashable {
 }
 
 enum CronHistoryParser {
+    /// Parse macOS unified-log output for cron process events. The
+    /// `log show --predicate 'process == "cron"' --style compact` format
+    /// has lines like:
+    ///   2026-04-30 17:35:00.123456 0xae28b   I  Default cron: (user) CMD (echo hello)
+    /// We extract the timestamp and the CMD payload.
+    static func parseUnifiedLog(_ raw: String) -> [CronRunRecord] {
+        var records: [CronRunRecord] = []
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
+
+        for line in raw.components(separatedBy: "\n") {
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            guard !trimmed.isEmpty else { continue }
+            // Find "CMD (...)" payload — only those lines are runs.
+            guard let cmdRange = trimmed.range(of: "CMD (") else { continue }
+            let after = trimmed[cmdRange.upperBound...]
+            guard let endParen = after.range(of: ")", options: .backwards) else { continue }
+            let command = String(after[after.startIndex..<endParen.lowerBound])
+                .trimmingCharacters(in: .whitespaces)
+
+            // Timestamp: first 19 chars of "2026-04-30 17:35:00".
+            let ts: Date? = {
+                guard trimmed.count >= 19 else { return nil }
+                let stamp = String(trimmed.prefix(19))
+                return formatter.date(from: stamp)
+            }()
+
+            records.append(CronRunRecord(
+                id: UUID(),
+                timestamp: ts,
+                command: command,
+                output: "(no captured output — recovered from macOS unified log; cron only mails when MAILTO is set)"
+            ))
+        }
+        return records.sorted { (lhs, rhs) -> Bool in
+            switch (lhs.timestamp, rhs.timestamp) {
+            case let (l?, r?): return l > r
+            case (_?, nil): return true
+            case (nil, _?): return false
+            default: return false
+            }
+        }
+    }
+
     /// Parse a Unix mail spool. Each message starts with a `From ` line.
     /// Cron's messages have a `Subject: Cron <user@host> <command>` header.
     static func parse(_ raw: String) -> [CronRunRecord] {
