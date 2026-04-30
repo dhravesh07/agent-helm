@@ -2,19 +2,13 @@ import SwiftUI
 
 @main
 struct AgentHelmApp: App {
+    @State private var hostStore = HostStore()
+
     var body: some Scene {
         WindowGroup("Agent Helm") {
-            ContentView()
-                .frame(minWidth: 900, minHeight: 600)
+            ContentView(hostStore: hostStore)
+                .frame(minWidth: 980, minHeight: 640)
         }
         .windowStyle(.titleBar)
-        .commands {
-            CommandGroup(replacing: .newItem) {
-                Button("New Connection…") {
-                    // Wired up in v0.1.
-                }
-                .keyboardShortcut("n", modifiers: [.command])
-            }
-        }
     }
 }

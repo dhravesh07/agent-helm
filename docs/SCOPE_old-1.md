@@ -49,13 +49,13 @@ A native macOS client for managing AI coding agents (Claude Code, OpenClaude, Op
 
 ## Tech stack
 - **Language:** Swift 5.9+
-- **UI:** SwiftUI (`NavigationSplitView` three-pane), `@Observable` for state.
+- **UI:** SwiftUI
 - **Minimum target:** macOS 14 (Sonoma)
-- **SSH:** [Citadel 0.12.1](https://github.com/orlandos-nl/Citadel) (pure Swift, depends on swift-nio + swift-nio-ssh + swift-crypto). Wrapped behind an `actor SSHService`.
-- **SQLite:** [GRDB.swift](https://github.com/groue/GRDB.swift) (added when SQLite browser lands in v0.0.4).
-- **Markdown:** Foundation's `AttributedString(markdown:)` for view; custom `NSTextView` wrapper for edit (added in v0.0.4); consider [Splash](https://github.com/JohnSundell/Splash) for code-block highlighting later.
-- **Build:** Xcode project (canonical, generated from `src/project.yml` via [xcodegen](https://github.com/yonaskolb/XcodeGen)) + `Package.swift` (kept for fast CLI iteration). The `.xcodeproj` is gitignored; contributors regenerate it with `make bootstrap` after cloning.
-- **Testing:** XCTest, ViewInspector for SwiftUI views.
+- **SSH:** [Citadel](https://github.com/orlandos-nl/Citadel) (pure Swift) — fallback to NMSSH if needed
+- **SQLite:** [GRDB.swift](https://github.com/groue/GRDB.swift)
+- **Markdown:** SwiftUI `Text` for view, custom `NSTextView` wrapper for edit; consider [Splash](https://github.com/JohnSundell/Splash) for highlighting
+- **Build:** SwiftPM for libraries; Xcode project for the app bundle (added in v0.2)
+- **Testing:** XCTest, ViewInspector for SwiftUI views
 
 ## Assumptions
 - The remote server runs systemd or has cron available.

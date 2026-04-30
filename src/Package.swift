@@ -10,31 +10,23 @@ let package = Package(
         .executable(name: "AgentHelm", targets: ["AgentHelm"])
     ],
     dependencies: [
-        // SSH client (pure Swift)
-        // Pinned later; uncomment once we wire SSH in v0.1.
-        // .package(url: "https://github.com/orlandos-nl/Citadel.git", from: "0.7.0"),
-
-        // SQLite via GRDB
-        // .package(url: "https://github.com/groue/GRDB.swift.git", from: "6.0.0"),
-
-        // ViewInspector for SwiftUI tests
-        // .package(url: "https://github.com/nalexn/ViewInspector.git", from: "0.10.0"),
+        .package(url: "https://github.com/orlandos-nl/Citadel.git", from: "0.12.1"),
     ],
     targets: [
         .executableTarget(
             name: "AgentHelm",
             dependencies: [
-                // .product(name: "Citadel", package: "Citadel"),
-                // .product(name: "GRDB", package: "GRDB.swift"),
+                .product(name: "Citadel", package: "Citadel"),
             ],
-            path: "Sources/AgentHelm"
+            path: "Sources/AgentHelm",
+            exclude: [
+                "Info.plist",
+                "AgentHelm.entitlements",
+            ]
         ),
         .testTarget(
             name: "AgentHelmTests",
-            dependencies: [
-                "AgentHelm",
-                // .product(name: "ViewInspector", package: "ViewInspector"),
-            ],
+            dependencies: ["AgentHelm"],
             path: "Tests/AgentHelmTests"
         )
     ]

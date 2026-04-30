@@ -19,14 +19,10 @@ This project follows the [Contributor Covenant v2.1](https://www.contributor-cov
 **Reporting a vulnerability:** email dhravesh@gmail.com with subject `Agent Helm security`. Do **not** file a public issue. Expect an acknowledgment within 72 hours.
 
 **Threat model:** Agent Helm holds SSH credentials and runs arbitrary commands on remote hosts. It is a sensitive client. Specifically:
+- Credentials are stored in the macOS Keychain only — never on disk in plaintext.
 - All connections are SSH (no plaintext protocols).
 - The app does not phone home; no telemetry is sent anywhere.
 - Remote command execution is logged locally and surfaced in the UI before it runs (no silent shell-outs).
-
-**Status of credential storage and sandboxing (v0.0.3):**
-- App Sandbox is **temporarily disabled** in pre-release builds so the app can read SSH key files (e.g., `~/.ssh/id_ed25519`) directly via `FileManager`. This is a development convenience and trades sandbox isolation for setup simplicity.
-- Private key paths are stored in `UserDefaults` (plain JSON). Keys themselves are read from disk on demand, never persisted by the app.
-- **macOS Keychain integration for any future passphrases lands in v0.0.4.** Sandbox + security-scoped bookmarks return in v1.0 alongside code signing and notarization. Until then, do not run pre-release builds on machines you don't fully control.
 
 ## Privacy
 - Local-first. No data leaves the user's Mac except over SSH to user-configured servers.
