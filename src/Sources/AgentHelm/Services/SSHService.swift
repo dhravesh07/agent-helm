@@ -23,7 +23,7 @@ enum SSHServiceError: LocalizedError {
     }
 }
 
-actor SSHService {
+actor SSHService: RemoteFileService {
     private var client: SSHClient?
     private var sftp: SFTPClient?
 

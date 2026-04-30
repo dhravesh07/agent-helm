@@ -12,6 +12,7 @@ struct HostFormView: View {
 
     @Environment(\.dismiss) private var dismiss
 
+    @State private var kind: HostKind = .remote
     @State private var name: String = ""
     @State private var hostname: String = ""
     @State private var portString: String = "22"
@@ -30,34 +31,62 @@ struct HostFormView: View {
     }
 
     private var canSubmit: Bool {
-        !name.trimmingCharacters(in: .whitespaces).isEmpty
-            && !hostname.trimmingCharacters(in: .whitespaces).isEmpty
-            && !username.trimmingCharacters(in: .whitespaces).isEmpty
-            && !privateKeyPath.trimmingCharacters(in: .whitespaces).isEmpty
-            && Int(portString) != nil
+        let trimmedName = name.trimmingCharacters(in: .whitespaces)
+        let trimmedRoot = rootPath.trimmingCharacters(in: .whitespaces)
+        guard !trimmedName.isEmpty, !trimmedRoot.isEmpty else { return false }
+        switch kind {
+        case .local:
+            return true
+        case .remote:
+            return !hostname.trimmingCharacters(in: .whitespaces).isEmpty
+                && !username.trimmingCharacters(in: .whitespaces).isEmpty
+                && !privateKeyPath.trimmingCharacters(in: .whitespaces).isEmpty
+                && Int(portString) != nil
+        }
     }
 
     var body: some View {
         VStack(spacing: 0) {
             Form {
-                Section("Identity") {
-                    TextField("Display name", text: $name)
-                    TextField("Hostname or IP", text: $hostname)
-                    TextField("Port", text: $portString)
-                    TextField("Username", text: $username)
-                }
-                Section("Authentication") {
-                    HStack {
-                        TextField("Private key path", text: $privateKeyPath)
-                        Button("Choose…") { pickKeyFile() }
+                Section("Connection") {
+                    Picker("Kind", selection: $kind) {
+                        ForEach(HostKind.allCases) { k in
+                            Label(k.displayName, systemImage: k.systemImage).tag(k)
+                        }
                     }
-                    Text("Supports OpenSSH ed25519 and RSA keys. Encrypted keys aren't supported in v0.0.3.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                    .pickerStyle(.segmented)
+
+                    TextField("Display name", text: $name)
                 }
-                Section("Root path") {
-                    TextField("Root directory on remote", text: $rootPath)
-                    Text("Default `~` resolves to the user's home directory after connect.")
+
+                if kind == .remote {
+                    Section("Server") {
+                        TextField("Hostname or IP", text: $hostname)
+                        TextField("Port", text: $portString)
+                        TextField("Username", text: $username)
+                    }
+                    Section("Authentication") {
+                        HStack {
+                            TextField("Private key path", text: $privateKeyPath)
+                            Button("Choose…") { pickKeyFile() }
+                        }
+                        Text("Supports OpenSSH ed25519 and RSA keys. Encrypted keys aren't supported in v0.0.4.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
+                Section(kind == .local ? "Folder on this Mac" : "Root path on remote") {
+                    HStack {
+                        TextField(
+                            kind == .local ? "Folder path (e.g. ~/.claude)" : "Root directory",
+                            text: $rootPath
+                        )
+                        if kind == .local {
+                            Button("Choose…") { pickFolder() }
+                        }
+                    }
+                    Text(rootPathHint)
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -75,13 +104,23 @@ struct HostFormView: View {
             }
             .padding()
         }
-        .frame(minWidth: 480, minHeight: 460)
+        .frame(minWidth: 520, minHeight: 480)
         .navigationTitle(titleText)
         .onAppear { hydrate() }
     }
 
+    private var rootPathHint: String {
+        switch kind {
+        case .local:
+            return "Point at the folder you want to browse — e.g. `~/.claude` for Claude Code, or any project root."
+        case .remote:
+            return "Default `~` resolves to the user's home directory after connect."
+        }
+    }
+
     private func hydrate() {
         guard case .edit(let host) = mode else { return }
+        kind = host.kind
         name = host.name
         hostname = host.hostname
         portString = String(host.port)
@@ -93,6 +132,7 @@ struct HostFormView: View {
     private func submit() {
         let profile = HostProfile(
             id: existingId ?? UUID(),
+            kind: kind,
             name: name,
             hostname: hostname,
             port: Int(portString) ?? 22,
@@ -113,6 +153,18 @@ struct HostFormView: View {
         panel.directoryURL = URL(fileURLWithPath: NSString("~/.ssh").expandingTildeInPath)
         if panel.runModal() == .OK, let url = panel.url {
             privateKeyPath = url.path
+        }
+    }
+
+    private func pickFolder() {
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = false
+        panel.canChooseDirectories = true
+        panel.allowsMultipleSelection = false
+        panel.showsHiddenFiles = true
+        panel.directoryURL = URL(fileURLWithPath: NSString("~").expandingTildeInPath)
+        if panel.runModal() == .OK, let url = panel.url {
+            rootPath = url.path
         }
     }
 }

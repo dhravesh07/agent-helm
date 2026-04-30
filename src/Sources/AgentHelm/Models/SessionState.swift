@@ -19,11 +19,17 @@ final class SessionState {
     var fileContents: String?
     var lastError: String?
 
-    private let service = SSHService()
+    private let service: any RemoteFileService
 
     init(profile: HostProfile) {
         self.profile = profile
         self.rootPath = profile.rootPath
+        switch profile.kind {
+        case .local:
+            self.service = LocalFileService()
+        case .remote:
+            self.service = SSHService()
+        }
     }
 
     func connect() async {
@@ -33,6 +39,8 @@ final class SessionState {
             try await service.connect(profile: profile)
             if rootPath == "~" || rootPath.isEmpty {
                 rootPath = (try? await service.resolveHome()) ?? "/"
+            } else {
+                rootPath = (rootPath as NSString).expandingTildeInPath
             }
             status = .connected
             await refresh()

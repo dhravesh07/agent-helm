@@ -15,11 +15,18 @@ struct HostListView: View {
                         .italic()
                 } else {
                     ForEach(store.hosts) { host in
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(host.name).font(.body)
-                            Text("\(host.username)@\(host.hostname):\(host.port)")
-                                .font(.caption)
+                        HStack(spacing: 8) {
+                            Image(systemName: host.kind.systemImage)
                                 .foregroundStyle(.secondary)
+                                .frame(width: 18)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(host.name).font(.body)
+                                Text(subtitle(for: host))
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                    .lineLimit(1)
+                                    .truncationMode(.middle)
+                            }
                         }
                         .tag(Optional(host.id))
                         .contextMenu {
@@ -52,6 +59,15 @@ struct HostListView: View {
             HostFormView(mode: .edit(host)) { updated in
                 store.update(updated)
             }
+        }
+    }
+
+    private func subtitle(for host: HostProfile) -> String {
+        switch host.kind {
+        case .local:
+            return host.rootPath.isEmpty ? "Local folder" : host.rootPath
+        case .remote:
+            return "\(host.username)@\(host.hostname):\(host.port)"
         }
     }
 }

@@ -50,7 +50,7 @@ struct ContentView: View {
                 Button {
                     Task { await session.disconnect() }
                 } label: {
-                    Label("Disconnect", systemImage: "bolt.slash")
+                    Label(session.profile.kind == .local ? "Close" : "Disconnect", systemImage: "bolt.slash")
                 }
             case .connecting:
                 ProgressView().controlSize(.small)
@@ -58,7 +58,7 @@ struct ContentView: View {
                 Button {
                     Task { await session.connect() }
                 } label: {
-                    Label("Connect", systemImage: "bolt")
+                    Label(session.profile.kind == .local ? "Open" : "Connect", systemImage: "bolt")
                 }
             }
         }
