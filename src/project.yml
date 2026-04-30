@@ -1,4 +1,4 @@
-name: AgentHelm
+name: Rookery
 options:
   bundleIdPrefix: dev.dhravesh
   deploymentTarget:
@@ -26,49 +26,49 @@ packages:
     from: 2.4.1
 
 targets:
-  AgentHelm:
+  Rookery:
     type: application
     platform: macOS
     sources:
-      - path: Sources/AgentHelm
+      - path: Sources/Rookery
     dependencies:
       - package: Citadel
       - package: MarkdownUI
         product: MarkdownUI
     info:
-      path: Sources/AgentHelm/Info.plist
+      path: Sources/Rookery/Info.plist
       properties:
-        CFBundleName: Agent Helm
-        CFBundleDisplayName: Agent Helm
+        CFBundleName: Rookery
+        CFBundleDisplayName: Rookery
         CFBundleShortVersionString: "$(MARKETING_VERSION)"
         CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
         LSMinimumSystemVersion: "$(MACOSX_DEPLOYMENT_TARGET)"
         NSHumanReadableCopyright: "Copyright © 2026 Dhravesh Shah. MIT License."
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: dev.dhravesh.AgentHelm
-        CODE_SIGN_ENTITLEMENTS: Sources/AgentHelm/AgentHelm.entitlements
+        PRODUCT_BUNDLE_IDENTIFIER: dev.dhravesh.Rookery
+        CODE_SIGN_ENTITLEMENTS: Sources/Rookery/Rookery.entitlements
         ENABLE_APP_SANDBOX: NO
         GENERATE_INFOPLIST_FILE: NO
 
-  AgentHelmTests:
+  RookeryTests:
     type: bundle.unit-test
     platform: macOS
     sources:
-      - path: Tests/AgentHelmTests
+      - path: Tests/RookeryTests
     dependencies:
-      - target: AgentHelm
+      - target: Rookery
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: dev.dhravesh.AgentHelmTests
+        PRODUCT_BUNDLE_IDENTIFIER: dev.dhravesh.RookeryTests
         GENERATE_INFOPLIST_FILE: YES
 
 schemes:
-  AgentHelm:
+  Rookery:
     build:
       targets:
-        AgentHelm: all
-        AgentHelmTests: [test]
+        Rookery: all
+        RookeryTests: [test]
     test:
       targets:
-        - AgentHelmTests
+        - RookeryTests

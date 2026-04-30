@@ -1,26 +1,32 @@
-# Agent Helm — Roadmap
+# Rookery — Roadmap
 
 Versions follow SemVer. The big-picture order is fixed; specifics inside each milestone may shuffle as we learn.
 
 ## v0.1 — Walking skeleton (target: 2026-Q2)
 The minimum that's useful to one person on one server.
 
-- [x] SSH connect to a single host with key-based auth (Keychain-stored passphrase). *(unencrypted keys done in 0.0.3; Keychain integration with 0.0.6.)*
+- [x] SSH connect to a single host with key-based auth (unencrypted ed25519 / RSA in 0.0.3; Keychain for passphrases is later).
 - [x] Browse remote filesystem from a configured root.
-- [x] Open and view `.md` files with rendered markdown.
-- [x] Local-Mac connection kind (added 0.0.4).
-- [x] Auto-connect on host selection (added 0.0.5).
-- [ ] **Workspace paths** abstraction (replaces single rootPath; per-host list of named paths) — **0.0.5**.
-- [ ] Edit `.md` files with **Lock for Editing** model and multi-signal conflict detection (mtime + size + SHA-256 + optional git status) — **0.0.6**. See SCOPE.md "Editing model".
-- [ ] Local SQLite DB browser: download to a tmp dir, open read-only, show schema + table viewer — **0.0.7**.
+- [x] Open and view `.md` files with rendered markdown (proper rendering via MarkdownUI in 0.0.7).
+- [x] Local-Mac connection kind (0.0.4).
+- [x] Auto-connect on host selection (0.0.5).
+- [x] Read & edit any UTF-8 text file (0.0.6).
+- [x] JSON / XML / image / PDF preview (0.0.7 / 0.0.8).
+- [x] Line-numbered source editor (0.0.8).
+- [x] JSON Graph view (0.0.8 — read-only; collapsible + edit-in-place in 0.0.9).
+- [x] Workspace paths (per-host list of named paths) — 0.0.9.
+- [x] Sleep/wake reconnect resilience — 0.0.9.
+- [x] Syntax highlighting (Swift, Python, JS/TS, JSON, YAML, TOML, Shell, Ruby, Go, Rust) — 0.0.9.
+- [ ] Edit `.md` files with **Lock for Editing** model and multi-signal conflict detection (mtime + size + SHA-256 + optional git status). See SCOPE.md "Editing model".
+- [ ] Local SQLite DB browser: download to a tmp dir, open read-only, show schema + table viewer.
 - [x] App skeleton: SwiftUI three-pane (sidebar / file tree / content), Xcode project. Signed build deferred to v1.0.
 
 **Definition of done:** I can edit a `CLAUDE.md` on my Linux box from my Mac in under 5 seconds and confirm the change took effect.
 
-## v0.2 — Connection resilience + cron
-- [ ] **Connection lifecycle hardening:** subscribe to `NSWorkspace.didWakeNotification` / `willSleepNotification` and `NWPathMonitor`; mark sessions as `.reconnecting` on wake; auto-reconnect with exponential backoff; never let the UI lie about being connected after a sleep cycle. (Today, after a sleep/wake the UI still says "connected" but the next operation will hang — this is the v0.2 P0 fix.)
+## v0.2 — Cron + live updates + lock-for-editing
+- [x] **Connection lifecycle hardening** (delivered in 0.0.9): NSWorkspace sleep/wake + NWPathMonitor; `.reconnecting` status; auto-reconnect on wake / network restored.
 - [ ] SFTP polling watcher with debounce — file tree updates when contents change on the remote.
-- [ ] Lock-for-Editing UI: the explicit lock button + integrity baseline + 3-way diff prompt on save conflict.
+- [ ] Lock-for-Editing UI: the explicit lock button + integrity baseline (mtime + size + SHA-256) + 3-way diff prompt on save conflict + git-aware diff in repos.
 - [ ] Cron tab: list, edit, validate, save the user's crontab.
 - [ ] One-shot trigger for a cron entry (run-now).
 

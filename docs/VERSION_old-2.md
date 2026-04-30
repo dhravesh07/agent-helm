@@ -1,41 +1,39 @@
 # Agent Helm — Version
 
-**Current:** `0.0.7` (real markdown rendering + image/PDF/JSON preview)
+**Current:** `0.0.8` (XML support + line numbers + JSON Graph view)
 
 ## Changelog
 
+### 0.0.8 — 2026-04-30
+**Three asks, all delivered:**
+
+1. **XML support.** New file kind covering `.xml`, `.plist`, `.xib`, `.storyboard`, `.rss`, `.atom`, `.svg`. Modes: **Preview / Source**. Preview pretty-prints via Foundation's `XMLDocument` with `[.nodePrettyPrint, .nodeCompactEmptyElement]`; falls back to raw text on parse failure. Edit happens in Source mode and writes the raw bytes back unchanged.
+
+2. **Line numbers in the source editor.** Replaced SwiftUI's `TextEditor` (no gutter, no layout-manager access) with `LineNumberedTextEditor` — an `NSViewRepresentable` wrapping `NSTextView` inside `NSScrollView` with a custom `NSRulerView` (`LineNumberRulerView`) drawing numbers in `monospacedDigitSystemFont`. Lazy redraw: gutter invalidates only on text-change and bounds-change notifications. Selection is preserved across `updateNSView` cycles. Auto-correction / smart-quotes / link-detection all disabled (these are wrong for source code). Find-bar enabled. Sets up the foundation for syntax highlighting later — that's a token-coloring layer on the same `NSTextView`.
+
+3. **JSON Graph view (jsoncrack-style).** New view mode for `.json` files: **Graph**. Native SwiftUI implementation, no JS / web-view:
+   - **Parse:** `JSONSerialization` → `JSONGraphNode` tree, where each node carries its inline scalar rows and its container children.
+   - **Layout:** hierarchical, left-to-right. Each node sits at the vertical center of its children's combined bounding box; subtrees stack vertically with a fixed gap. Node width is fixed (260 pt); height grows with row count.
+   - **Render:** ZStack of `JSONGraphNodeCard`s positioned via `.position()`, with a `Canvas` overlay drawing bezier-curve edges from a parent's container row to the child node's left edge.
+   - **Zoom:** floating control in the bottom-right (-/+/100%). 40%–200% range. Panning via the parent `ScrollView`.
+   - **Card design:** title bar (path component, accent-tinted), divider, then scalar rows with type-aware coloring (strings green, numbers orange, booleans purple, null gray, hex codes preserve their swatch in future), then container rows showing `key: {N keys}` / `key: [N items]` with a right-arrow indicator.
+   - **Modes for JSON:** **Graph / Pretty / Source** (graph is now the default).
+
+**File kind enum** gained `.xml`. **`FileViewMode`** gained `.graph` and `.formatted`. **`PreviewableFileKind.availableViewModes`** drives the segmented picker (per-kind, in display order). The picker auto-sizes to the number of available modes.
+
+**Files added:**
+- `Views/XMLPreviewView.swift`
+- `Views/LineNumberedTextEditor.swift` (+ `LineNumberRulerView` in the same file)
+- `Views/JSONGraphView.swift` (+ private parser, layout engine, and node-card view in the same file)
+
+**Files renamed/repurposed:**
+- `JSONPreviewView` is now the "Pretty" mode; the new "Graph" mode is the default for JSON.
+
 ### 0.0.7 — 2026-04-30
-**Fix the markdown preview + broaden file-type support.**
-
-The 0.0.6 markdown preview was using `AttributedString(markdown:)` with `interpretedSyntax: .inlineOnlyPreservingWhitespace`, which only handled inline syntax (bold/italic/links/code spans). Block-level structure (headings, code blocks, lists, tables) collapsed into a single line — clearly broken when previewing TESTING.md.
-
-**Replaced with [MarkdownUI 2.4.1](https://github.com/gonzalezreal/swift-markdown-ui)** (added as SwiftPM dependency, GitHub theme). Real block-level rendering: headings sized correctly, code blocks preserve indentation and use monospaced font, lists nest, tables render as tables, block quotes indent, links are clickable. Live preview against the in-memory edit buffer is unchanged.
-
-**New per-file-kind dispatch** — `PreviewableFileKind` enum (`markdown / json / image / pdf / sourceText`) maps the file extension to the right preview/editor:
-
-| Kind | Extensions | Preview | Source | Editable |
-|---|---|---|---|---|
-| Markdown | `.md`, `.markdown`, `.mdown`, `.mkd` | MarkdownUI render | Plain TextEditor | Yes |
-| JSON | `.json` | Pretty-printed (sorted keys, 2-space indent) | Raw TextEditor | Yes |
-| Image | `.png`, `.jpg`/`.jpeg`, `.gif`, `.heic`/`.heif`, `.tiff`, `.bmp`, `.webp`, `.ico`, `.icns` | `NSImage` scaled-to-fit | n/a | No |
-| PDF | `.pdf` | PDFKit `PDFView` continuous-vertical | n/a | No |
-| Source text | everything else UTF-8 | n/a | Monospaced TextEditor | Yes |
-
-Images and PDFs hit the preview-only path: bytes loaded into `FileBufferState.image(data:)` / `.pdf(data:)`, no UTF-8 decode attempted. Save / Discard buttons hide for non-editable kinds. The Preview/Source segmented toggle only appears when both modes meaningfully differ (markdown, JSON).
-
-**State changes:**
-- `FileBufferState` adds `.image(data: Data)` and `.pdf(data: Data)` cases.
-- `RemoteFileEntry` gains `previewableKind` extension via the new `PreviewableFileKind` enum.
-- `SessionState.openFile` dispatches on `previewableKind` after the size check.
-
-**New views:**
-- `MarkdownPreviewView` — wraps MarkdownUI's `Markdown` with a scroll view and the GitHub theme.
-- `JSONPreviewView` — uses `JSONSerialization` to pretty-print with sorted keys; falls back to raw text if not valid JSON.
-- `ImagePreviewView` — `Image(nsImage:)` in a scrollable container; placeholder if the image format isn't decodable.
-- `PDFPreviewView` — `NSViewRepresentable` wrapping `PDFView`.
+- MarkdownUI 2.4.1 for proper markdown rendering. Image preview (NSImage). PDF preview (PDFKit). JSON pretty-print. Per-file-kind dispatch.
 
 ### 0.0.6 — 2026-04-30
-- Read & edit any UTF-8 text file. Markdown Preview/Source toggle. Save/Discard, Cmd+S, dirty indicator. (Markdown render quality fixed in 0.0.7.)
+- Read & edit any UTF-8 text file. Markdown Preview/Source toggle (rendering quality fixed in 0.0.7).
 
 ### 0.0.5 — 2026-04-30
 - Auto-connect on host selection. Architectural-review docs corrections.

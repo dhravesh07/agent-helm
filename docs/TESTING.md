@@ -1,4 +1,4 @@
-# Agent Helm — Testing
+# Rookery — Testing
 
 ## Strategy
 
@@ -24,19 +24,19 @@ The project has both an Xcode project (the canonical build) and a `Package.swift
 ### Via the Xcode project (recommended)
 
 ```bash
-cd agent-helm/src
-make bootstrap   # generates AgentHelm.xcodeproj from project.yml (one-time after clone)
+cd rookery/src
+make bootstrap   # generates Rookery.xcodeproj from project.yml (one-time after clone)
 make test        # runs unit tests via xcodebuild
-make build       # builds AgentHelm.app
+make build       # builds Rookery.app
 make run         # builds and launches the .app
 ```
 
-Or in Xcode: `make project && open AgentHelm.xcodeproj` and hit ⌘U.
+Or in Xcode: `make project && open Rookery.xcodeproj` and hit ⌘U.
 
 ### Via SwiftPM (fast, CLI-only iteration)
 
 ```bash
-cd agent-helm/src
+cd rookery/src
 swift test
 ```
 

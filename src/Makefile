@@ -1,12 +1,12 @@
-# Agent Helm — build commands
+# Rookery — build commands
 #
 # Run `make` for the help, or `make bootstrap` after a fresh clone.
 
 .PHONY: help bootstrap project build test run clean
 
 XCODE_DIR := /Applications/Xcode.app/Contents/Developer
-PROJECT   := AgentHelm.xcodeproj
-SCHEME    := AgentHelm
+PROJECT   := Rookery.xcodeproj
+SCHEME    := Rookery
 
 help:
 	@echo "Targets:"
@@ -18,7 +18,7 @@ help:
 	@echo "  clean       Remove DerivedData and the generated .xcodeproj."
 
 bootstrap: project
-	@echo "Done. Open AgentHelm.xcodeproj in Xcode, or run 'make build'."
+	@echo "Done. Open Rookery.xcodeproj in Xcode, or run 'make build'."
 
 project:
 	@command -v xcodegen >/dev/null || { echo "xcodegen not installed. Run: brew install xcodegen"; exit 1; }
@@ -42,8 +42,8 @@ test:
 
 run: build
 	@APP=$$(DEVELOPER_DIR=$(XCODE_DIR) xcodebuild -project $(PROJECT) -scheme $(SCHEME) -configuration Debug -showBuildSettings 2>/dev/null | awk '/ BUILT_PRODUCTS_DIR =/ {print $$3}'); \
-	open "$$APP/AgentHelm.app"
+	open "$$APP/Rookery.app"
 
 clean:
 	rm -rf $(PROJECT)
-	rm -rf ~/Library/Developer/Xcode/DerivedData/AgentHelm-*
+	rm -rf ~/Library/Developer/Xcode/DerivedData/Rookery-*

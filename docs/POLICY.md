@@ -1,4 +1,4 @@
-# Agent Helm — Policy
+# Rookery — Policy
 
 ## License
 MIT License. Full text in [LICENSE](../LICENSE).
@@ -16,9 +16,9 @@ Contributions welcome. To contribute:
 This project follows the [Contributor Covenant v2.1](https://www.contributor-covenant.org/version/2/1/code-of-conduct/). Report violations privately to dhravesh@gmail.com.
 
 ## Security
-**Reporting a vulnerability:** email dhravesh@gmail.com with subject `Agent Helm security`. Do **not** file a public issue. Expect an acknowledgment within 72 hours.
+**Reporting a vulnerability:** email dhravesh@gmail.com with subject `Rookery security`. Do **not** file a public issue. Expect an acknowledgment within 72 hours.
 
-**Threat model:** Agent Helm holds SSH credentials and runs arbitrary commands on remote hosts. It is a sensitive client. Specifically:
+**Threat model:** Rookery holds SSH credentials and runs arbitrary commands on remote hosts. It is a sensitive client. Specifically:
 - All connections are SSH (no plaintext protocols).
 - The app does not phone home; no telemetry is sent anywhere.
 - Remote command execution is logged locally and surfaced in the UI before it runs (no silent shell-outs).

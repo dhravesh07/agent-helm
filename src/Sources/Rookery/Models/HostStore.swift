@@ -3,7 +3,7 @@ import Observation
 
 @Observable
 final class HostStore {
-    private static let storageKey = "AgentHelm.hosts.v1"
+    private static let storageKey = "Rookery.hosts.v1"
 
     var hosts: [HostProfile] {
         didSet { persist() }

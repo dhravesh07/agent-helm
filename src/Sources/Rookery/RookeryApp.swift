@@ -1,11 +1,11 @@
 import SwiftUI
 
 @main
-struct AgentHelmApp: App {
+struct RookeryApp: App {
     @State private var hostStore = HostStore()
 
     var body: some Scene {
-        WindowGroup("Agent Helm") {
+        WindowGroup("Rookery") {
             ContentView(hostStore: hostStore)
                 .frame(minWidth: 980, minHeight: 640)
         }

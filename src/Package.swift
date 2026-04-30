@@ -2,12 +2,12 @@
 import PackageDescription
 
 let package = Package(
-    name: "AgentHelm",
+    name: "Rookery",
     platforms: [
         .macOS(.v14)
     ],
     products: [
-        .executable(name: "AgentHelm", targets: ["AgentHelm"])
+        .executable(name: "Rookery", targets: ["Rookery"])
     ],
     dependencies: [
         .package(url: "https://github.com/orlandos-nl/Citadel.git", from: "0.12.1"),
@@ -15,21 +15,21 @@ let package = Package(
     ],
     targets: [
         .executableTarget(
-            name: "AgentHelm",
+            name: "Rookery",
             dependencies: [
                 .product(name: "Citadel", package: "Citadel"),
                 .product(name: "MarkdownUI", package: "swift-markdown-ui"),
             ],
-            path: "Sources/AgentHelm",
+            path: "Sources/Rookery",
             exclude: [
                 "Info.plist",
-                "AgentHelm.entitlements",
+                "Rookery.entitlements",
             ]
         ),
         .testTarget(
-            name: "AgentHelmTests",
-            dependencies: ["AgentHelm"],
-            path: "Tests/AgentHelmTests"
+            name: "RookeryTests",
+            dependencies: ["Rookery"],
+            path: "Tests/RookeryTests"
         )
     ]
 )

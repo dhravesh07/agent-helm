@@ -13,7 +13,7 @@ struct ContentView: View {
     var body: some View {
         NavigationSplitView {
             HostListView(store: hostStore, selection: $selectedHostId)
-                .navigationTitle("Agent Helm")
+                .navigationTitle("Rookery")
                 .frame(minWidth: 220)
         } content: {
             if let session = currentSession {
@@ -91,7 +91,7 @@ struct ContentView: View {
                 .scaledToFit()
                 .frame(width: 72, height: 72)
                 .foregroundStyle(.tertiary)
-            Text("Agent Helm")
+            Text("Rookery")
                 .font(.title)
             Text("Add a host in the sidebar to begin.")
                 .foregroundStyle(.secondary)
