@@ -135,7 +135,7 @@ struct FileEditorView: View {
         case (.markdown, .preview):
             MarkdownPreviewView(text: session.editText)
         case (.json, .graph):
-            JSONGraphView(raw: session.editText)
+            JSONGraphView(text: $session.editText)
         case (.json, .formatted):
             JSONPreviewView(raw: session.editText)
         case (.xml, .preview):
@@ -149,7 +149,8 @@ struct FileEditorView: View {
         let isProse = entry.previewableKind == .markdown
         return LineNumberedTextEditor(
             text: $session.editText,
-            isMonospaced: !isProse
+            isMonospaced: !isProse,
+            languageSpec: SyntaxLanguages.spec(for: entry)
         )
     }
 

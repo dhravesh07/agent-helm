@@ -18,7 +18,7 @@ struct HostFormView: View {
     @State private var portString: String = "22"
     @State private var username: String = ""
     @State private var privateKeyPath: String = ""
-    @State private var rootPath: String = "~"
+    @State private var workspaces: [Workspace] = [Workspace(name: "Root", path: "~")]
 
     private var existingId: UUID? {
         if case .edit(let host) = mode { return host.id }
@@ -32,8 +32,12 @@ struct HostFormView: View {
 
     private var canSubmit: Bool {
         let trimmedName = name.trimmingCharacters(in: .whitespaces)
-        let trimmedRoot = rootPath.trimmingCharacters(in: .whitespaces)
-        guard !trimmedName.isEmpty, !trimmedRoot.isEmpty else { return false }
+        guard !trimmedName.isEmpty else { return false }
+        guard !workspaces.isEmpty else { return false }
+        guard workspaces.allSatisfy({
+            !$0.name.trimmingCharacters(in: .whitespaces).isEmpty &&
+            !$0.path.trimmingCharacters(in: .whitespaces).isEmpty
+        }) else { return false }
         switch kind {
         case .local:
             return true
@@ -70,25 +74,14 @@ struct HostFormView: View {
                             TextField("Private key path", text: $privateKeyPath)
                             Button("Choose…") { pickKeyFile() }
                         }
-                        Text("Supports OpenSSH ed25519 and RSA keys. Encrypted keys aren't supported in v0.0.4.")
+                        Text("Supports OpenSSH ed25519 and RSA keys. Encrypted keys aren't supported yet.")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
                 }
 
-                Section(kind == .local ? "Folder on this Mac" : "Root path on remote") {
-                    HStack {
-                        TextField(
-                            kind == .local ? "Folder path (e.g. ~/.claude)" : "Root directory",
-                            text: $rootPath
-                        )
-                        if kind == .local {
-                            Button("Choose…") { pickFolder() }
-                        }
-                    }
-                    Text(rootPathHint)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                Section(workspaceSectionTitle) {
+                    workspaceEditor
                 }
             }
             .formStyle(.grouped)
@@ -104,18 +97,60 @@ struct HostFormView: View {
             }
             .padding()
         }
-        .frame(minWidth: 520, minHeight: 480)
+        .frame(minWidth: 560, minHeight: 540)
         .navigationTitle(titleText)
         .onAppear { hydrate() }
     }
 
-    private var rootPathHint: String {
-        switch kind {
-        case .local:
-            return "Point at the folder you want to browse — e.g. `~/.claude` for Claude Code, or any project root."
-        case .remote:
-            return "Default `~` resolves to the user's home directory after connect."
+    private var workspaceSectionTitle: String {
+        kind == .local ? "Workspaces (folders on this Mac)" : "Workspaces (paths on remote)"
+    }
+
+    private var workspaceEditor: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            ForEach($workspaces) { $workspace in
+                HStack(spacing: 6) {
+                    TextField("Name", text: $workspace.name)
+                        .frame(width: 110)
+                    TextField(kind == .local ? "Folder path" : "Remote path", text: $workspace.path)
+                    if kind == .local {
+                        Button {
+                            pickFolder(into: $workspace.path)
+                        } label: {
+                            Image(systemName: "folder")
+                        }
+                        .buttonStyle(.borderless)
+                    }
+                    Button {
+                        remove(workspace)
+                    } label: {
+                        Image(systemName: "minus.circle")
+                            .foregroundStyle(.secondary)
+                    }
+                    .buttonStyle(.borderless)
+                    .disabled(workspaces.count <= 1)
+                }
+            }
+            HStack {
+                Button {
+                    workspaces.append(Workspace(name: "New", path: kind == .local ? "~" : "~"))
+                } label: {
+                    Label("Add workspace", systemImage: "plus")
+                }
+                .buttonStyle(.borderless)
+                Spacer()
+            }
+            Text(kind == .local
+                 ? "Add one folder per area you want to inspect — e.g. ~/.claude, your project root, ~/.config/aider."
+                 : "Add a workspace per directory you operate in on the remote — Skills, project root, agent state, etc. `~` resolves to the user's home after connect.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
         }
+    }
+
+    private func remove(_ workspace: Workspace) {
+        guard workspaces.count > 1 else { return }
+        workspaces.removeAll { $0.id == workspace.id }
     }
 
     private func hydrate() {
@@ -126,7 +161,7 @@ struct HostFormView: View {
         portString = String(host.port)
         username = host.username
         privateKeyPath = host.privateKeyPath
-        rootPath = host.rootPath
+        workspaces = host.workspaces.isEmpty ? [Workspace(name: "Root", path: "~")] : host.workspaces
     }
 
     private func submit() {
@@ -138,7 +173,7 @@ struct HostFormView: View {
             port: Int(portString) ?? 22,
             username: username,
             privateKeyPath: privateKeyPath,
-            rootPath: rootPath.isEmpty ? "~" : rootPath
+            workspaces: workspaces
         )
         onSubmit(profile)
         dismiss()
@@ -156,7 +191,7 @@ struct HostFormView: View {
         }
     }
 
-    private func pickFolder() {
+    private func pickFolder(into binding: Binding<String>) {
         let panel = NSOpenPanel()
         panel.canChooseFiles = false
         panel.canChooseDirectories = true
@@ -164,7 +199,7 @@ struct HostFormView: View {
         panel.showsHiddenFiles = true
         panel.directoryURL = URL(fileURLWithPath: NSString("~").expandingTildeInPath)
         if panel.runModal() == .OK, let url = panel.url {
-            rootPath = url.path
+            binding.wrappedValue = url.path
         }
     }
 }

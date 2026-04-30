@@ -29,7 +29,7 @@ struct HostProfile: Codable, Identifiable, Hashable {
     var port: Int
     var username: String
     var privateKeyPath: String
-    var rootPath: String
+    var workspaces: [Workspace]
 
     init(
         id: UUID = UUID(),
@@ -39,7 +39,7 @@ struct HostProfile: Codable, Identifiable, Hashable {
         port: Int = 22,
         username: String = "",
         privateKeyPath: String = "",
-        rootPath: String = "~"
+        workspaces: [Workspace] = [Workspace(name: "Root", path: "~")]
     ) {
         self.id = id
         self.kind = kind
@@ -48,23 +48,45 @@ struct HostProfile: Codable, Identifiable, Hashable {
         self.port = port
         self.username = username
         self.privateKeyPath = privateKeyPath
-        self.rootPath = rootPath
+        self.workspaces = workspaces.isEmpty ? [Workspace(name: "Root", path: "~")] : workspaces
     }
 
     enum CodingKeys: String, CodingKey {
-        case id, kind, name, hostname, port, username, privateKeyPath, rootPath
+        case id, kind, name, hostname, port, username, privateKeyPath
+        case workspaces
+        case rootPath  // legacy v0.0.3–v0.0.8 single-path field
     }
 
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         self.id = try c.decode(UUID.self, forKey: .id)
-        // Default to .remote so existing v0.0.3 stored profiles decode cleanly.
         self.kind = try c.decodeIfPresent(HostKind.self, forKey: .kind) ?? .remote
         self.name = try c.decode(String.self, forKey: .name)
         self.hostname = try c.decodeIfPresent(String.self, forKey: .hostname) ?? ""
         self.port = try c.decodeIfPresent(Int.self, forKey: .port) ?? 22
         self.username = try c.decodeIfPresent(String.self, forKey: .username) ?? ""
         self.privateKeyPath = try c.decodeIfPresent(String.self, forKey: .privateKeyPath) ?? ""
-        self.rootPath = try c.decodeIfPresent(String.self, forKey: .rootPath) ?? "~"
+
+        if let ws = try c.decodeIfPresent([Workspace].self, forKey: .workspaces), !ws.isEmpty {
+            self.workspaces = ws
+        } else {
+            // Migrate from legacy single rootPath. v0.0.9 onwards.
+            let legacy = try c.decodeIfPresent(String.self, forKey: .rootPath)
+            let path = (legacy?.isEmpty == false ? legacy! : "~")
+            self.workspaces = [Workspace(name: "Root", path: path)]
+        }
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(id, forKey: .id)
+        try c.encode(kind, forKey: .kind)
+        try c.encode(name, forKey: .name)
+        try c.encode(hostname, forKey: .hostname)
+        try c.encode(port, forKey: .port)
+        try c.encode(username, forKey: .username)
+        try c.encode(privateKeyPath, forKey: .privateKeyPath)
+        try c.encode(workspaces, forKey: .workspaces)
+        // rootPath intentionally not written; field is legacy-decode-only.
     }
 }

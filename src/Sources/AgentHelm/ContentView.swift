@@ -57,7 +57,7 @@ struct ContentView: View {
         switch session.status {
         case .disconnected:
             Task { await session.connect() }
-        case .connecting, .connected, .failed:
+        case .connecting, .connected, .reconnecting, .failed:
             break
         }
     }
@@ -72,7 +72,7 @@ struct ContentView: View {
                 } label: {
                     Label(session.profile.kind == .local ? "Close" : "Disconnect", systemImage: "bolt.slash")
                 }
-            case .connecting:
+            case .connecting, .reconnecting:
                 ProgressView().controlSize(.small)
             case .disconnected, .failed:
                 Button {

@@ -12,30 +12,54 @@ struct FileBrowserView: View {
     }
 
     private var header: some View {
-        HStack(spacing: 8) {
-            Button {
-                Task { await session.navigateUp() }
-            } label: {
-                Image(systemName: "arrow.up")
+        VStack(spacing: 0) {
+            if session.profile.workspaces.count > 1 {
+                workspacePicker
+                    .padding(.horizontal, 8)
+                    .padding(.top, 8)
             }
-            .disabled(session.status != .connected)
-            .help("Parent directory")
+            HStack(spacing: 8) {
+                Button {
+                    Task { await session.navigateUp() }
+                } label: {
+                    Image(systemName: "arrow.up")
+                }
+                .disabled(session.status != .connected)
+                .help("Parent directory")
 
-            Text(session.rootPath)
-                .font(.system(.body, design: .monospaced))
-                .lineLimit(1)
-                .truncationMode(.middle)
-                .frame(maxWidth: .infinity, alignment: .leading)
+                Text(session.rootPath)
+                    .font(.system(.body, design: .monospaced))
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                    .frame(maxWidth: .infinity, alignment: .leading)
 
-            Button {
-                Task { await session.refresh() }
-            } label: {
-                Image(systemName: "arrow.clockwise")
+                Button {
+                    Task { await session.refresh() }
+                } label: {
+                    Image(systemName: "arrow.clockwise")
+                }
+                .disabled(session.status != .connected)
+                .help("Refresh")
             }
-            .disabled(session.status != .connected)
-            .help("Refresh")
+            .padding(8)
         }
-        .padding(8)
+    }
+
+    private var workspacePicker: some View {
+        Picker("Workspace", selection: Binding(
+            get: { session.currentWorkspaceId },
+            set: { newId in
+                guard let workspace = session.profile.workspaces.first(where: { $0.id == newId }) else { return }
+                Task { await session.switchWorkspace(workspace) }
+            }
+        )) {
+            ForEach(session.profile.workspaces) { ws in
+                Text(ws.name).tag(ws.id)
+            }
+        }
+        .pickerStyle(.segmented)
+        .labelsHidden()
+        .disabled(session.status != .connected)
     }
 
     @ViewBuilder
@@ -47,6 +71,12 @@ struct FileBrowserView: View {
             VStack(spacing: 8) {
                 ProgressView()
                 Text("Connecting…").foregroundStyle(.secondary)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        case .reconnecting:
+            VStack(spacing: 8) {
+                ProgressView()
+                Text("Reconnecting after sleep/wake…").foregroundStyle(.secondary)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         case .failed(let msg):

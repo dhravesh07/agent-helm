@@ -10,8 +10,8 @@ A host profile is one of:
 
 Both kinds use the same browser/viewer UI; the file backend is abstracted behind `RemoteFileService`. Selection auto-connects (instant for local, async for remote) — the user does not click a "Connect" button to use a host they just selected.
 
-## Workspace paths (v0.0.5+)
-Agent Helm does **not** hardcode locations like `~/.claude/skills/`. Each host profile carries an ordered list of named **workspace paths**:
+## Workspace paths (v0.0.9 — implemented)
+Agent Helm does **not** hardcode locations like `~/.claude/skills/`. Each host profile carries an ordered list of named **workspace paths** (`HostProfile.workspaces: [Workspace]`):
 
 ```
 [
@@ -21,9 +21,11 @@ Agent Helm does **not** hardcode locations like `~/.claude/skills/`. Each host p
 ]
 ```
 
-The browser surfaces these as top-level entries; the user can add, rename, reorder, or remove them. **Discovery presets** (Claude Code, OpenClaude, Aider, OpenCode, Continue, Cline) populate the list with sensible defaults at host-creation time, but no path is sacred — Aider scatters `.aider*` files in each project directory, so the user is expected to point at the relevant project root, not a fixed home-dir location.
+The file-browser header shows a segmented workspace picker when the host has 2+ workspaces. Add, rename, or delete via the host form. **Discovery presets** (Claude Code, OpenClaude, Aider, OpenCode) for one-click population of common paths land in v1.0 onboarding; today the user types or picks paths.
 
-This abstraction is introduced before any feature (skills installer, DB browser, cron) that would otherwise bake in vendor-specific paths.
+Aider scatters `.aider*` files in each project directory, so the user is expected to point at the relevant project root, not a fixed home-dir location. This is exactly what the workspace abstraction enables — no path is sacred.
+
+`Codable` migration: v0.0.3–v0.0.8 stored profiles (single `rootPath`) decode cleanly into a one-workspace list named `Root`.
 
 ## In scope (v0–v1)
 
@@ -42,7 +44,8 @@ This abstraction is introduced before any feature (skills installer, DB browser,
   - **PDFs** (`.pdf`) — rendered via PDFKit's `PDFView` with continuous-vertical scroll; preview-only, no edit.
   - **All other UTF-8 text** — code, configs, YAML, TOML, CSV, scripts, plain text — opens in the source editor.
   - **Binary** (anything that fails UTF-8 decode and isn't an image/PDF) — surfaces as "Binary file — not shown".
-- **Source editor** (v0.0.8+) is `LineNumberedTextEditor` — `NSTextView` + custom `NSRulerView` gutter showing line numbers in monospaced-digit font. Replaces SwiftUI's `TextEditor`, which has no gutter and limited control over layout. Sets up the foundation for syntax highlighting in a future slice.
+- **Source editor** (v0.0.8+) is `LineNumberedTextEditor` — `NSTextView` + custom `NSRulerView` gutter showing line numbers in monospaced-digit font. Replaces SwiftUI's `TextEditor`, which has no gutter and limited control over layout.
+- **Syntax highlighting** (v0.0.9+) — pure-Swift regex-based highlighter (`SyntaxHighlighter` + `LanguageSpec` registry). Languages: Swift, Python, JS/TS, JSON, YAML, TOML, Shell, Ruby, Go, Rust. No JavaScript runtime, no new SwiftPM dependency. Token colors adapt to light/dark via system palette. Re-highlight is debounced 200ms on text change. Adding a language is a single `LanguageSpec` literal.
 - 5 MB per-file cap for in-app edits; larger files surface as "too large" with size shown. The cap is configurable in v0.9+.
 - Save-back uses Cmd+S or the toolbar button. Local writes are atomic; remote writes use SFTP `[.write, .create, .truncate]`.
 - **Lock-for-Editing model with multi-signal conflict detection** (mtime + size + SHA-256, plus git-aware diff in repos) is the v0.1-finalization layer for use against an active agent — see "Editing model" below. The current release ships with a Save / Discard pair and a "Modified" indicator; the lock + 3-way diff land before v0.1.0.

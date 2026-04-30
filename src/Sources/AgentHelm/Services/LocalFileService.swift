@@ -24,22 +24,17 @@ enum LocalFileServiceError: LocalizedError {
 }
 
 actor LocalFileService: RemoteFileService {
-    private var connectedRoot: String?
+    private var isOpen = false
 
     func connect(profile: HostProfile) async throws {
-        let resolved = Self.expand(profile.rootPath)
-        var isDir: ObjCBool = false
-        guard FileManager.default.fileExists(atPath: resolved, isDirectory: &isDir) else {
-            throw LocalFileServiceError.rootNotFound(path: resolved)
-        }
-        guard isDir.boolValue else {
-            throw LocalFileServiceError.rootNotDirectory(path: resolved)
-        }
-        self.connectedRoot = resolved
+        // No real connection to make for local. Each workspace's path is
+        // validated on first listDirectory call so a missing path on one
+        // workspace doesn't block the others.
+        isOpen = true
     }
 
     func disconnect() async {
-        self.connectedRoot = nil
+        isOpen = false
     }
 
     func resolveHome() async throws -> String {

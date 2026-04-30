@@ -1,10 +1,13 @@
 import Foundation
 import Observation
+import AppKit
+import Network
 
 enum ConnectionStatus: Equatable {
     case disconnected
     case connecting
     case connected
+    case reconnecting
     case failed(String)
 }
 
@@ -15,6 +18,7 @@ final class SessionState {
 
     let profile: HostProfile
     var status: ConnectionStatus = .disconnected
+    var currentWorkspaceId: UUID
     var rootPath: String
     var entries: [RemoteFileEntry] = []
     var selectedFile: RemoteFileEntry?
@@ -33,17 +37,38 @@ final class SessionState {
         bufferState.isText && isDirty && saveStatus != .saving
     }
 
+    var currentWorkspace: Workspace {
+        profile.workspaces.first(where: { $0.id == currentWorkspaceId })
+            ?? profile.workspaces.first
+            ?? Workspace(name: "Root", path: "~")
+    }
+
     private let service: any RemoteFileService
+    private var lifecycleObservers: [NSObjectProtocol] = []
+    private let pathMonitor = NWPathMonitor()
+    private var lastNetworkSatisfied = true
 
     init(profile: HostProfile) {
         self.profile = profile
-        self.rootPath = profile.rootPath
+        let firstWorkspace = profile.workspaces.first ?? Workspace(name: "Root", path: "~")
+        self.currentWorkspaceId = firstWorkspace.id
+        self.rootPath = firstWorkspace.path
         switch profile.kind {
         case .local:
             self.service = LocalFileService()
         case .remote:
             self.service = SSHService()
         }
+        observeSystemEvents()
+    }
+
+    /// Called by ContentView when the session is being torn down (e.g. host
+    /// removed). Removes notification observers and stops the path monitor.
+    func cancelLifecycleObservers() {
+        let nc = NSWorkspace.shared.notificationCenter
+        for obs in lifecycleObservers { nc.removeObserver(obs) }
+        lifecycleObservers = []
+        pathMonitor.cancel()
     }
 
     // MARK: - Connection
@@ -71,6 +96,28 @@ final class SessionState {
         status = .disconnected
         entries = []
         clearFileBuffer()
+    }
+
+    /// Reconnect after a sleep/wake or network-change. Marks status briefly
+    /// before going through `connect()` so the UI shows it's working.
+    func reconnect() async {
+        status = .reconnecting
+        await service.disconnect()
+        await connect()
+    }
+
+    // MARK: - Workspaces
+
+    func switchWorkspace(_ workspace: Workspace) async {
+        if isDirty {
+            lastError = "Save your changes before switching workspaces."
+            return
+        }
+        currentWorkspaceId = workspace.id
+        rootPath = (workspace.path as NSString).expandingTildeInPath
+        clearFileBuffer()
+        selectedFile = nil
+        await refresh()
     }
 
     // MARK: - Browsing
@@ -101,9 +148,6 @@ final class SessionState {
 
     func openFile(_ entry: RemoteFileEntry) async {
         if isDirty {
-            // Naive guard: refuse to swap files with unsaved changes.
-            // A confirmation dialog is the right next polish; for now the user
-            // sees the dirty state and can save or discard before switching.
             lastError = "Save your changes before switching files."
             return
         }
@@ -154,7 +198,6 @@ final class SessionState {
             try await service.writeFile(at: entry.path, contents: data)
             bufferState = .text(original: editText)
             saveStatus = .saved(at: Date())
-            // Refresh the directory listing so size in the file tree updates.
             if case .connected = status {
                 if let updated = try? await service.listDirectory(at: rootPath) {
                     entries = updated
@@ -170,6 +213,68 @@ final class SessionState {
         if case .text(let original) = bufferState {
             editText = original
             saveStatus = .idle
+        }
+    }
+
+    // MARK: - System lifecycle (sleep/wake, network)
+
+    private func observeSystemEvents() {
+        let nc = NSWorkspace.shared.notificationCenter
+
+        let wakeObs = nc.addObserver(
+            forName: NSWorkspace.didWakeNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor [weak self] in await self?.handleWake() }
+        }
+        let sleepObs = nc.addObserver(
+            forName: NSWorkspace.willSleepNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor [weak self] in await self?.handleSleep() }
+        }
+        lifecycleObservers = [wakeObs, sleepObs]
+
+        // Network path: mark a transition only when connectivity flips, so we
+        // don't reconnect on every WiFi change to the same satisfied state.
+        pathMonitor.pathUpdateHandler = { [weak self] path in
+            let satisfied = (path.status == .satisfied)
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                if !self.lastNetworkSatisfied && satisfied {
+                    await self.handleNetworkRestored()
+                }
+                self.lastNetworkSatisfied = satisfied
+            }
+        }
+        pathMonitor.start(queue: .main)
+    }
+
+    private func handleSleep() async {
+        // Note the moment but don't tear down — many sleeps are short and the
+        // session might still be alive when we wake. We'll validate on wake.
+    }
+
+    private func handleWake() async {
+        // Local sessions are unaffected by sleep — the filesystem is right
+        // here. (External-volume hosts may have unmounted, but the next
+        // listDirectory will surface that.)
+        guard profile.kind == .remote else { return }
+        guard case .connected = status else { return }
+        await reconnect()
+    }
+
+    private func handleNetworkRestored() async {
+        guard profile.kind == .remote else { return }
+        switch status {
+        case .connected, .failed:
+            // Either we silently lost the socket (now visibly disconnected),
+            // or we were stuck in a failed state. Try again.
+            await reconnect()
+        default:
+            break
         }
     }
 

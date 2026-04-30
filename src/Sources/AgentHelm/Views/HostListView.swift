@@ -65,7 +65,10 @@ struct HostListView: View {
     private func subtitle(for host: HostProfile) -> String {
         switch host.kind {
         case .local:
-            return host.rootPath.isEmpty ? "Local folder" : host.rootPath
+            if host.workspaces.count > 1 {
+                return "\(host.workspaces.count) workspaces"
+            }
+            return host.workspaces.first?.path ?? "Local folder"
         case .remote:
             return "\(host.username)@\(host.hostname):\(host.port)"
         }

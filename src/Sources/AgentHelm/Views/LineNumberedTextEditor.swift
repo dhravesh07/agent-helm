@@ -1,12 +1,14 @@
 import SwiftUI
 import AppKit
 
-/// SwiftUI text editor with a line-number gutter on the left.
-/// Built on `NSTextView` + a custom `NSRulerView` because SwiftUI's
-/// `TextEditor` doesn't expose either the layout manager or a gutter.
+/// SwiftUI text editor with a line-number gutter on the left and optional
+/// regex-based syntax highlighting. Built on `NSTextView` because SwiftUI's
+/// `TextEditor` exposes neither the layout manager (needed for the gutter)
+/// nor the text storage (needed to apply per-range color attributes).
 struct LineNumberedTextEditor: NSViewRepresentable {
     @Binding var text: String
     var isMonospaced: Bool = true
+    var languageSpec: LanguageSpec? = nil
 
     func makeNSView(context: Context) -> NSScrollView {
         let scrollView = NSTextView.scrollableTextView()
@@ -35,9 +37,11 @@ struct LineNumberedTextEditor: NSViewRepresentable {
         textView.string = text
         textView.textContainerInset = NSSize(width: 4, height: 8)
 
-        // Wider area, no soft-wrap to start (reasonable default for code).
         if let container = textView.textContainer {
-            container.containerSize = NSSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)
+            container.containerSize = NSSize(
+                width: CGFloat.greatestFiniteMagnitude,
+                height: CGFloat.greatestFiniteMagnitude
+            )
             container.widthTracksTextView = true
         }
         textView.isVerticallyResizable = true
@@ -49,8 +53,8 @@ struct LineNumberedTextEditor: NSViewRepresentable {
         scrollView.hasVerticalRuler = true
         scrollView.rulersVisible = true
 
-        // Redraw the gutter as the user types or scrolls.
-        context.coordinator.observe(textView: textView, ruler: ruler, scrollView: scrollView)
+        context.coordinator.bind(textView: textView, ruler: ruler, scrollView: scrollView)
+        context.coordinator.applyHighlight(textView: textView, language: languageSpec)
 
         return scrollView
     }
@@ -59,18 +63,24 @@ struct LineNumberedTextEditor: NSViewRepresentable {
         guard let textView = scrollView.documentView as? NSTextView else { return }
 
         if textView.string != text {
-            // Preserve selection where possible.
             let oldRange = textView.selectedRange()
             textView.string = text
             let safeLocation = min(oldRange.location, (text as NSString).length)
             textView.setSelectedRange(NSRange(location: safeLocation, length: 0))
             scrollView.verticalRulerView?.needsDisplay = true
+            context.coordinator.applyHighlight(textView: textView, language: languageSpec)
         }
 
         let target = font(for: isMonospaced)
         if textView.font != target {
             textView.font = target
+            context.coordinator.applyHighlight(textView: textView, language: languageSpec)
             scrollView.verticalRulerView?.needsDisplay = true
+        }
+
+        if context.coordinator.lastLanguageName != languageSpec?.name {
+            context.coordinator.lastLanguageName = languageSpec?.name
+            context.coordinator.applyHighlight(textView: textView, language: languageSpec)
         }
     }
 
@@ -87,23 +97,27 @@ struct LineNumberedTextEditor: NSViewRepresentable {
 
     final class Coordinator: NSObject, NSTextViewDelegate {
         var parent: LineNumberedTextEditor
+        var lastLanguageName: String?
         private var observers: [NSObjectProtocol] = []
+        private var debounceTask: Task<Void, Never>?
 
         init(_ parent: LineNumberedTextEditor) {
             self.parent = parent
+            self.lastLanguageName = parent.languageSpec?.name
         }
 
         deinit {
             observers.forEach { NotificationCenter.default.removeObserver($0) }
         }
 
-        func observe(textView: NSTextView, ruler: LineNumberRulerView, scrollView: NSScrollView) {
+        func bind(textView: NSTextView, ruler: LineNumberRulerView, scrollView: NSScrollView) {
             let textChanged = NotificationCenter.default.addObserver(
                 forName: NSText.didChangeNotification,
                 object: textView,
                 queue: .main
-            ) { _ in
+            ) { [weak self] _ in
                 ruler.needsDisplay = true
+                self?.scheduleHighlight(textView: textView)
             }
             let scrolled = NotificationCenter.default.addObserver(
                 forName: NSView.boundsDidChangeNotification,
@@ -119,6 +133,41 @@ struct LineNumberedTextEditor: NSViewRepresentable {
         func textDidChange(_ notification: Notification) {
             guard let textView = notification.object as? NSTextView else { return }
             parent.text = textView.string
+        }
+
+        private func scheduleHighlight(textView: NSTextView) {
+            debounceTask?.cancel()
+            let language = parent.languageSpec
+            debounceTask = Task { [weak self] in
+                try? await Task.sleep(nanoseconds: 200_000_000)  // 200 ms debounce
+                guard !Task.isCancelled else { return }
+                await MainActor.run {
+                    self?.applyHighlight(textView: textView, language: language)
+                }
+            }
+        }
+
+        func applyHighlight(textView: NSTextView, language: LanguageSpec?) {
+            guard let textStorage = textView.textStorage else { return }
+            let fullRange = NSRange(location: 0, length: textStorage.length)
+
+            textStorage.beginEditing()
+            // Reset attributes to the editor's defaults before re-applying.
+            textStorage.removeAttribute(.foregroundColor, range: fullRange)
+            textStorage.addAttribute(.foregroundColor, value: NSColor.labelColor, range: fullRange)
+            if let font = textView.font {
+                textStorage.addAttribute(.font, value: font, range: fullRange)
+            }
+
+            if let language {
+                let highlights = SyntaxHighlighter.highlight(textView.string, with: language)
+                for (range, color) in highlights {
+                    if NSMaxRange(range) <= textStorage.length {
+                        textStorage.addAttribute(.foregroundColor, value: color, range: range)
+                    }
+                }
+            }
+            textStorage.endEditing()
         }
     }
 }
@@ -143,7 +192,6 @@ final class LineNumberRulerView: NSRulerView {
               let layoutManager = textView.layoutManager,
               let textContainer = textView.textContainer else { return }
 
-        // Background + right-edge separator.
         NSColor(name: nil) { appearance in
             appearance.bestMatch(from: [.darkAqua, .vibrantDark]) != nil
                 ? NSColor.black.withAlphaComponent(0.15)
@@ -185,7 +233,6 @@ final class LineNumberRulerView: NSRulerView {
                 lineRectInText = layoutManager.boundingRect(forGlyphRange: glyphRange, in: textContainer)
             }
 
-            // Skip lines above the visible area; bail out below it.
             if lineRectInText.maxY < visibleRect.minY {
                 lineNumber += 1
                 let next = NSMaxRange(lineRange)
