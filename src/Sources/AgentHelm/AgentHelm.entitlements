@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- App Sandbox: required for notarization and Mac App Store -->
+    <key>com.apple.security.app-sandbox</key>
+    <true/>
+
+    <!-- Network client: needed to open SSH connections to remote hosts -->
+    <key>com.apple.security.network.client</key>
+    <true/>
+
+    <!-- User-selected files (read/write): for importing skills and choosing local files -->
+    <key>com.apple.security.files.user-selected.read-write</key>
+    <true/>
+
+    <!-- Downloads folder access: typical destination for skill downloads -->
+    <key>com.apple.security.files.downloads.read-only</key>
+    <true/>
+
+    <!-- Note: keychain-access-groups entitlement is intentionally omitted until
+         we set up signing with a paid Apple Developer account in v1.0.
+         The default user keychain is accessible without an access group. -->
+</dict>
+</plist>

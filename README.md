@@ -4,7 +4,7 @@
 
 Agent Helm connects to one or more Linux hosts over SSH and gives you structured editors for the things you actually need to manage when running Claude Code, OpenClaude, Aider, or similar agents on a remote box: the markdown files (skills, system prompts, notes), the agent's local SQLite databases, the cron schedules, and the agent processes themselves. One pane of glass, no terminal-juggling.
 
-**Status:** pre-release scaffold (v0.0.1). No functional code yet — see [ROADMAP.md](docs/ROADMAP.md).
+**Status:** pre-release scaffold (v0.0.2). No functional code yet — see [ROADMAP.md](docs/ROADMAP.md).
 
 ## Why
 
@@ -14,22 +14,26 @@ See [docs/MOAT.md](docs/MOAT.md) for the competitive landscape.
 
 ## Install
 
-_(Coming with v0.1. Until then, build from source.)_
+_(Pre-release. Build from source.)_
 
 ```bash
 git clone https://github.com/dhravesh07/agent-helm.git
 cd agent-helm/src
-swift build -c release
+brew install xcodegen     # one-time
+make bootstrap            # generates AgentHelm.xcodeproj from project.yml
+make build
 ```
 
 ## Run
 
 ```bash
 cd agent-helm/src
-swift run AgentHelm
+make run                  # builds and launches AgentHelm.app
 ```
 
-For a proper Mac app bundle (signed/notarized), an Xcode project lands in v0.2.
+Or open `AgentHelm.xcodeproj` in Xcode and hit ⌘R.
+
+Signed and notarized DMGs ship with v1.0; current builds are unsigned local-dev only.
 
 ## Documentation
 

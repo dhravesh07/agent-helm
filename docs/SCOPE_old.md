@@ -54,7 +54,7 @@ A native macOS client for managing AI coding agents (Claude Code, OpenClaude, Op
 - **SSH:** [Citadel](https://github.com/orlandos-nl/Citadel) (pure Swift) — fallback to NMSSH if needed
 - **SQLite:** [GRDB.swift](https://github.com/groue/GRDB.swift)
 - **Markdown:** SwiftUI `Text` for view, custom `NSTextView` wrapper for edit; consider [Splash](https://github.com/JohnSundell/Splash) for highlighting
-- **Build:** Xcode project (canonical, generated from `src/project.yml` via [xcodegen](https://github.com/yonaskolb/XcodeGen)) + `Package.swift` (kept for fast CLI iteration). The `.xcodeproj` is gitignored; contributors regenerate it with `make bootstrap` after cloning.
+- **Build:** SwiftPM for libraries; Xcode project for the app bundle (added in v0.2)
 - **Testing:** XCTest, ViewInspector for SwiftUI views
 
 ## Assumptions

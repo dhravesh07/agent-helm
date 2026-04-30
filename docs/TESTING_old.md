@@ -19,28 +19,17 @@ End-to-end UI testing through XCUITest is **not** prioritized for v0–v1 — to
 
 ## Running tests
 
-The project has both an Xcode project (the canonical build) and a `Package.swift` (handy for fast CLI iteration on pure-Swift modules). Either path works.
-
-### Via the Xcode project (recommended)
-
 ```bash
-cd agent-helm/src
-make bootstrap   # generates AgentHelm.xcodeproj from project.yml (one-time after clone)
-make test        # runs unit tests via xcodebuild
-make build       # builds AgentHelm.app
-make run         # builds and launches the .app
-```
-
-Or in Xcode: `make project && open AgentHelm.xcodeproj` and hit ⌘U.
-
-### Via SwiftPM (fast, CLI-only iteration)
-
-```bash
+# Unit + view inspection
 cd agent-helm/src
 swift test
+
+# Or in Xcode
+xed Package.swift     # opens the package
+# Cmd-U to run tests
 ```
 
-If your `swift` resolves to Apple's Command Line Tools rather than Xcode, `swift test` will fail with `no such module 'XCTest'`. Use the Xcode toolchain explicitly:
+**Note:** if your `swift` resolves to Apple's Command Line Tools rather than Xcode, `swift test` will fail with `no such module 'XCTest'`. Use the Xcode toolchain explicitly:
 
 ```bash
 DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcrun swift test
