@@ -314,8 +314,10 @@ struct SQLiteBrowserView: View {
                 } label: {
                     Label("Run", systemImage: "play.fill")
                 }
+                .rookeryGlassButtonProminent()
                 .keyboardShortcut(.return, modifiers: .command)
                 .disabled(isRunningQuery)
+                .help("Run query (⌘↩)")
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 6)

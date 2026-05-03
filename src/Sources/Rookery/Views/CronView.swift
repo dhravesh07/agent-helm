@@ -45,31 +45,41 @@ struct CronView: View {
             switch session.cron.tab {
             case .entries:
                 if session.cron.dirty {
-                    Text("• Modified")
-                        .font(.caption)
+                    Label("Modified", systemImage: "circle.fill")
+                        .font(.caption2)
                         .foregroundStyle(.orange)
+                        .symbolRenderingMode(.hierarchical)
+                        .accessibilityLabel("Unsaved cron changes")
                 }
                 saveStatusLabel
-                Button("Reload") {
+                Button {
                     Task { await session.loadCron() }
+                } label: {
+                    Label("Reload", systemImage: "arrow.clockwise")
                 }
+                .rookeryGlassButton()
+                .help("Re-read crontab from the host")
                 Button {
                     Task { await session.saveCron() }
                 } label: {
                     Label("Install crontab", systemImage: "square.and.arrow.down")
                 }
+                .rookeryGlassButtonProminent()
                 .keyboardShortcut("s", modifiers: .command)
                 .disabled(!session.cron.dirty || session.cron.saveStatus == .saving)
+                .help("Save and install the new crontab (⌘S)")
             case .history:
                 Button {
                     Task { await session.loadCronHistory() }
                 } label: {
                     Label("Refresh", systemImage: "arrow.clockwise")
                 }
+                .rookeryGlassButton()
+                .help("Re-read history from the mail spool")
             }
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
+        .padding(.horizontal, RookerySpacing.md)
+        .padding(.vertical, RookerySpacing.sm)
     }
 
     @ViewBuilder

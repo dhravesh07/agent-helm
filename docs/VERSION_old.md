@@ -1,8 +1,38 @@
 # Rookery — Version
 
-**Current:** `0.6.0` (cron management — back in scope by user request)
+**Current:** `0.6.1` (cron history — diagnostics + macOS unified-log fallback)
 
 ## Changelog
+
+### 0.6.1 — 2026-04-30
+**Fix: cron History tab is empty for the common macOS case.**
+
+User reported creating an `echo hello` cron entry, installing it, and seeing nothing in History. Two reasons combined: (1) macOS rarely has a working MTA so cron drops output silently — `/var/mail/$USER` stays empty; (2) the empty-state was unhelpful about *why* it was empty.
+
+Two fixes shipped:
+
+1. **Diagnostic empty-state.** When `readRunHistory` returns no records, the History tab now shows a "What we checked" panel listing each probe and its result:
+   - Mail spool path (`/var/mail/$USER`, `/var/spool/mail/$USER`) — present / missing / size in bytes
+   - `MAILTO` setting in the user's crontab
+   - cron / crond daemon presence (`pgrep -l`)
+   - macOS unified-log fallback result (only on local hosts)
+   Each diagnostic has a severity (info / warn / error) and an explanation. Plus a "Want to capture output anyway?" suggestion box explaining the `>> /tmp/cron-x.log 2>&1` workaround.
+2. **macOS unified-log fallback for local hosts.** When the mail spool is empty AND the host is local, Rookery runs `log show --predicate 'process == "cron"' --info --style compact --last 1d` and parses each `cron: (user) CMD (...)` line into a `CronRunRecord` (timestamp + command, no output). The diagnostic banner notes "Using macOS unified log as fallback".
+
+New files:
+- `Models/CronDiagnostic.swift` — `CronDiagnostic` (severity + title + detail), `CronHistoryResult` (records + diagnostics).
+- `CronHistoryParser.parseUnifiedLog` — extracts `CMD (...)` payloads from `log show` output.
+
+Changes:
+- `CronService.readRunHistory(hostKind:)` now returns `CronHistoryResult` and runs diagnostic probes.
+- `CronState` adds `historyDiagnostics`.
+- `SessionState.loadCronHistory` passes `profile.kind` so the service knows whether to try the macOS unified-log fallback.
+- `CronView.CronHistoryPane` renders the empty-state with the diagnostics panel; when records exist, a collapsible diagnostics banner sits at the top.
+
+Project version: 0.6.0 → 0.6.1; CURRENT_PROJECT_VERSION 60 → 61.
+
+#### Why the unified-log fallback can't show output
+`log show` only records that cron *fired the job* — it doesn't capture stdout/stderr. To get the actual output back into Rookery, the user has to redirect output (`>> /tmp/cron-x.log 2>&1`) and read the log file from the Files surface. A built-in "capture to file" toggle in the entry editor is on the roadmap as a v0.7 polish.
 
 ### 0.6.0 — 2026-04-30
 **Cron CRUD + run history.** User decided to bring cron management back in scope after the v0.1.0 pivot had explicitly cut it. Re-evaluated: while Anthropic Scheduled Tasks and ClawTab cover their own niches, neither is a portable cron manager for arbitrary user-installed cron jobs across local Mac and remote Linux. Different scope, complementary.

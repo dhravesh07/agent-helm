@@ -34,9 +34,12 @@ This abstraction is introduced before any feature (skills installer, DB browser,
 
 ### File browsing & editing
 - Browse the remote filesystem from one or more **workspace paths** per host (see "Workspace paths" below).
-- Live `.md` viewing always; editing is **explicit-opt-in**, not the default. The viewer is read-only until the user clicks **Lock for Editing** on a specific file. See "Editing model" below for why.
+- **All UTF-8 text files are editable** — markdown, code, JSON, YAML, TOML, plain text. Source-mode editing uses a SwiftUI `TextEditor` with monospaced font for code and proportional for prose; binary files surface as "binary, not shown" and are not editable.
+- **Markdown gets a Preview/Source toggle.** Default is Preview when opening a `.md` file; switch to Source to edit. Preview re-renders the in-memory buffer, so live edits show up when toggling back.
+- 5 MB per-file cap for in-app edits in v0.0.6; larger files surface as "too large" with size shown. The cap is configurable in v0.7+.
+- Save-back uses Cmd+S or the toolbar button. Local writes are atomic; remote writes use SFTP `[.write, .create, .truncate]`.
+- **Lock-for-Editing model with multi-signal conflict detection** (mtime + size + SHA-256, plus git-aware diff in repos) is the v0.1-finalization layer for use against an active agent — see "Editing model" below. v0.0.6 ships with a Save / Discard pair and a "Modified" indicator; the lock + 3-way diff land before v0.1.0.
 - Real-time updates when files change on the remote (SFTP polling for v0.1; inotify-over-SSH bridge in v0.5+).
-- Save-back over SFTP with multi-signal conflict detection (mtime + size + SHA-256 of the original) and a git-aware path when the directory is a git repo (warn if `git status` shows the file dirty since the lock was acquired).
 
 ### Database inspection
 - Read-only browser for SQLite databases on the remote, transferred lazily over SFTP.

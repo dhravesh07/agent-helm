@@ -36,11 +36,12 @@ The file-browser header shows a segmented workspace picker when the host has 2+ 
 - Save-back: Cmd+S or toolbar button. Local writes are atomic; remote writes use SFTP `[.write, .create, .truncate]`.
 - Save / Discard / "Modified" indicator.
 
-### Database inspection (next — v0.2)
-- **SQLite** read-only browser: schema view, paginated table view, read-only SELECT/PRAGMA query runner.
-- For local: open file directly via [GRDB.swift](https://github.com/groue/GRDB.swift).
-- For remote: SFTP-download to `~/Library/Caches/Rookery/`, open read-only, refetch on user-triggered refresh.
-- **Agent-aware schemas:** first-class views for known formats — Claude Code session DB, Aider chat history, OpenCode stores, vector indices. The pretty-print and "what is this row" hints come from a registry of known schemas.
+### Database inspection (v0.2.0 — implemented)
+- **SQLite** read-only browser via [GRDB.swift 7.10](https://github.com/groue/GRDB.swift): file kinds `.db`, `.sqlite`, `.sqlite3`, `.db3`.
+- Three modes: **Tables** (sidebar of tables + paginated row grid, 50/page), **Schema** (column list + full CREATE statement), **Query** (line-numbered SQL editor with syntax highlighting + read-only SELECT/WITH/PRAGMA/EXPLAIN runner, up to 1000 rows).
+- Local: opens the file directly (read-only). Remote: SFTP-download to `~/Library/Caches/Rookery/`, opens the cached copy. Refresh button re-runs the table query; full re-download on user-triggered refresh is deferred to v0.5.
+- 200 MB cap for SQLite files (separate from the 5 MB text-edit cap).
+- **Agent-schema awareness** — registry skeleton in place; specific schema templates (Claude Code session DB, Aider chat history, OpenCode stores) ship as the layouts are verified against real installations.
 
 ### Transcript / log viewer (v0.3)
 - **JSONL** transcript viewer — one message per row, expandable inline, role-colored, search.

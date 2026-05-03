@@ -92,6 +92,15 @@ Re-introduced in v0.6.0 by user request after being cut at the v0.1.0 pivot. Dis
 ## Editing model
 Files are editable by default. The "Modified" indicator + Save / Discard pair handles the simple case. **Lock-for-Editing** with multi-signal conflict detection (mtime + size + SHA-256 + git status) is added when contention with a live agent matters in practice — likely once the DB / transcript inspection lands.
 
+## Visual design (v0.7.0+)
+Rookery adopts Apple's **Liquid Glass** design language on macOS 26+ for navigation and controls — primary buttons get `.glassProminent`, secondary buttons get `.glass`, floating overlays use `.glassEffect()`. Content (file lists, SQLite tables, JSONL rows, markdown render, JSON graph cards) stays on solid surfaces — per Apple's HIG: glass is a **navigation-layer** material, not a content-layer one.
+
+All glass APIs are gated with `#available(macOS 26.0, *)` and fall back cleanly to `.bordered` / `.borderedProminent` / `ultraThinMaterial` on macOS 14/15. Centralized in `Views/RookeryStyle.swift` so the choice can be revisited in one place.
+
+Window styling: `.windowToolbarStyle(.unified)` (title bar + toolbar combined), `.windowResizability(.contentMinSize)`, `.defaultSize(1180×760)` — the standard inspector-app look (Xcode, Mail, Notes).
+
+Spacing rhythm: `RookerySpacing.{xs:4, sm:8, md:12, lg:16, xl:20}` — consistent across the app rather than ad-hoc constants.
+
 ## Tech stack
 - **Language:** Swift 5.9+
 - **UI:** SwiftUI (`NavigationSplitView` three-pane), `@Observable` for state.

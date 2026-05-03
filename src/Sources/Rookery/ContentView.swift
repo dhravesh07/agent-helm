@@ -14,7 +14,7 @@ struct ContentView: View {
         NavigationSplitView {
             HostListView(store: hostStore, selection: $selectedHostId)
                 .navigationTitle("Rookery")
-                .frame(minWidth: 220)
+                .navigationSplitViewColumnWidth(min: 240, ideal: 280, max: 360)
         } content: {
             if let session = currentSession {
                 Group {
@@ -26,15 +26,18 @@ struct ContentView: View {
                     }
                 }
                 .navigationTitle(session.profile.name)
+                .navigationSubtitle(session.profile.workspaces.first?.path ?? "")
                 .toolbar {
                     surfaceToolbar(session: session)
                     connectionToolbar(session: session)
                 }
-                .frame(minWidth: session.surface == .cron ? 720 : 320)
+                .navigationSplitViewColumnWidth(min: session.surface == .cron ? 720 : 360, ideal: 480)
             } else {
-                Text("Select or add a host")
-                    .foregroundStyle(.secondary)
-                    .frame(minWidth: 320)
+                ContentUnavailableView(
+                    "Select a host",
+                    systemImage: "macbook.and.iphone",
+                    description: Text("Pick a host from the sidebar, or add one with the + button.")
+                )
             }
         } detail: {
             if let session = currentSession {
@@ -89,6 +92,8 @@ struct ContentView: View {
             .labelsHidden()
             .frame(width: 180)
             .disabled(session.status != .connected)
+            .accessibilityLabel("Host surface")
+            .help("Switch between file browsing and cron management")
         }
     }
 
@@ -100,31 +105,48 @@ struct ContentView: View {
                 Button {
                     Task { await session.disconnect() }
                 } label: {
-                    Label(session.profile.kind == .local ? "Close" : "Disconnect", systemImage: "bolt.slash")
+                    Label(
+                        session.profile.kind == .local ? "Close" : "Disconnect",
+                        systemImage: "bolt.slash"
+                    )
                 }
+                .rookeryGlassButton()
+                .help(session.profile.kind == .local ? "Close folder" : "Disconnect from host")
             case .connecting, .reconnecting:
-                ProgressView().controlSize(.small)
+                HStack(spacing: 6) {
+                    ProgressView().controlSize(.small)
+                    Text(session.status == .reconnecting ? "Reconnecting" : "Connecting")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
             case .disconnected, .failed:
                 Button {
                     Task { await session.connect() }
                 } label: {
-                    Label(session.profile.kind == .local ? "Open" : "Connect", systemImage: "bolt")
+                    Label(
+                        session.profile.kind == .local ? "Open" : "Connect",
+                        systemImage: "bolt"
+                    )
                 }
+                .rookeryGlassButtonProminent()
+                .help(session.profile.kind == .local ? "Open folder" : "Connect to host")
             }
         }
     }
 
     private var welcome: some View {
-        VStack(spacing: 12) {
-            Image(systemName: "sailboat")
-                .resizable()
-                .scaledToFit()
-                .frame(width: 72, height: 72)
+        VStack(spacing: RookerySpacing.md) {
+            Image(systemName: "tree.fill")
+                .font(.system(size: 64))
                 .foregroundStyle(.tertiary)
-            Text("Rookery")
-                .font(.title)
-            Text("Add a host in the sidebar to begin.")
-                .foregroundStyle(.secondary)
+                .symbolRenderingMode(.hierarchical)
+            VStack(spacing: 4) {
+                Text("Rookery")
+                    .font(.system(.title, weight: .semibold))
+                Text("Read what your AI agents wrote.")
+                    .font(.body)
+                    .foregroundStyle(.secondary)
+            }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }

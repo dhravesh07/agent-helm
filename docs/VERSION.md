@@ -1,8 +1,54 @@
 # Rookery — Version
 
-**Current:** `0.6.1` (cron history — diagnostics + macOS unified-log fallback)
+**Current:** `0.7.0` (UI repolish — Liquid Glass + HIG)
 
 ## Changelog
+
+### 0.7.0 — 2026-05-03
+**UI repolish informed by the [swiftui-expert](https://github.com/AvdLee/SwiftUI-Agent-Skill) and [liquid-glass](https://github.com/haider-nawaz/liquid-glass-skill) skills.** The previous UI was functional but visually generic. v0.7 adopts Apple's macOS 26 Liquid Glass design language for navigation and controls, fixes window styling to match macOS conventions, and adds the accessibility labels that were missing on icon-only controls.
+
+#### Liquid Glass adoption (gated, navigation/controls only)
+Per the liquid-glass skill's core rule — *"Glass is for controls and navigation only. Never apply glass to content (lists, tables, media, text blocks)"* — Rookery applies glass selectively:
+
+- **Glass-prominent on primary actions:** Connect (toolbar), Save (file editor), Install crontab (cron view), Run query (SQLite query mode).
+- **Glass on secondary actions:** Disconnect, Discard, Reload, Run-now, Refresh.
+- **Glass surface on the JSON graph zoom-control overlay** (the floating bottom-right pill).
+- **Content stays untouched** — file lists, SQLite tables, JSONL rows, markdown render, JSON graph cards all keep their solid surfaces.
+
+All glass APIs are gated with `#available(macOS 26.0, *)` and fall back to `.bordered` / `.borderedProminent` / `ultraThinMaterial` on macOS 14/15. Centralized in a new `Views/RookeryStyle.swift` with `.rookeryGlassButton()`, `.rookeryGlassButtonProminent()`, `.rookeryGlassSurface(cornerRadius:)` extensions.
+
+#### Window + scene styling (`RookeryApp.swift`)
+- `.windowToolbarStyle(.unified)` — title bar and toolbar in a single combined row, the standard look for Mac inspector apps (Xcode, Mail, Notes).
+- `.windowResizability(.contentMinSize)` — green-zoom button respects the content's minimum size.
+- `.defaultSize(width: 1180, height: 760)` — sensible launch size for a three-pane app.
+- `CommandGroup` for ⌘R Refresh, posted via `NotificationCenter` and observed in `FileBrowserView`.
+
+#### Layout polish
+- **Sidebar (HostListView):** richer empty state with an inline "Add host" prominent button and an explanatory caption. Per-row VoiceOver label combines name + kind + subtitle.
+- **Sidebar column:** explicit `.navigationSplitViewColumnWidth(min:240, ideal:280, max:360)` instead of a single min frame.
+- **Content column:** `.navigationSubtitle(...)` shows the current workspace path under the host name.
+- **Welcome state:** new `tree.fill` symbol (literal rookery), product tagline below the title.
+- **`ContentUnavailableView`** replaces ad-hoc placeholder VStacks for "Not connected" / "Empty directory" / "Couldn't connect" — gives consistent spacing, icon size, and an actions slot for retry buttons.
+- **File-row icons** now match the file kind: `doc.text.fill` for markdown, `curlybraces` for JSON/JSONL, `cylinder.split.1x2.fill` for SQLite, `photo.fill` for images, `doc.richtext.fill` for PDFs. Hierarchical symbol rendering for tonal depth.
+- **Spacing tokens** (`RookerySpacing.{xs,sm,md,lg,xl}`) replace ad-hoc `12` / `8` / `16` constants for consistent rhythm.
+
+#### Accessibility
+- VoiceOver labels on every icon-only button (up arrow, refresh, auto-refresh toggle, surface picker, connection status).
+- Help tooltips on every toolbar button, surfacing keyboard shortcuts where applicable.
+- "Modified" indicator now uses a labelled `Label("Modified", systemImage: "circle.fill")` with `.accessibilityLabel("Unsaved changes")` instead of just an orange bullet.
+- File entries: `.accessibilityElement(children: .combine)` + descriptive label combining name and size.
+
+#### Carryover (no functional changes)
+- Cron CRUD, history with diagnostics, JSONL transcript viewer, SQLite inspector, syntax highlighting, sleep/wake reconnect — all unchanged.
+
+#### Build / version
+Project version: 0.6.1 → 0.7.0; CURRENT_PROJECT_VERSION 61 → 70.
+
+#### Skills consulted
+- `swiftui-expert/references/latest-apis.md` — verified no deprecated APIs introduced.
+- `swiftui-expert/references/macos-window-styling.md` — `.windowToolbarStyle(.unified)`, `.windowResizability(.contentMinSize)`, `.defaultSize(...)` patterns.
+- `swiftui-expert/references/liquid-glass.md` + the dedicated `liquid-glass` skill — `.glassEffect(...)`, `.buttonStyle(.glass)` / `.glassProminent` patterns; macOS 26 availability gating.
+- `swiftui-expert/references/accessibility-patterns.md` — label / hint / hidden conventions.
 
 ### 0.6.1 — 2026-04-30
 **Fix: cron History tab is empty for the common macOS case.**

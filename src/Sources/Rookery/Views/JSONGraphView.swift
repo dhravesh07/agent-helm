@@ -473,9 +473,9 @@ struct JSONGraphView: View {
             .help("Reset zoom")
         }
         .buttonStyle(.borderless)
-        .padding(8)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 8))
-        .padding(12)
+        .padding(RookerySpacing.sm)
+        .rookeryGlassSurface(cornerRadius: 8)
+        .padding(RookerySpacing.md)
     }
 
     private func commitScalarEdit(at path: [JSONPathSegment], newValue: JSONValue) {

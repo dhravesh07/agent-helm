@@ -228,13 +228,15 @@ struct CronEntryEditor: View {
     // MARK: - Run now
 
     private var runNowSection: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: RookerySpacing.sm) {
             HStack {
                 Button {
                     onRunNow(currentEntry())
                 } label: {
-                    Label("Run now", systemImage: "play.circle")
+                    Label("Run now", systemImage: "play.fill")
                 }
+                .rookeryGlassButton()
+                .help("Run this command immediately and capture its output")
                 Spacer()
             }
             if let result = runNowResult {

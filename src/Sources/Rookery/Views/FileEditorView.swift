@@ -34,42 +34,55 @@ struct FileEditorView: View {
     // MARK: - Header
 
     private func header(for entry: RemoteFileEntry) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(alignment: .firstTextBaseline) {
+        VStack(alignment: .leading, spacing: RookerySpacing.sm) {
+            HStack(alignment: .firstTextBaseline, spacing: RookerySpacing.sm) {
                 Text(entry.name)
-                    .font(.title3.bold())
+                    .font(.title3.weight(.semibold))
+                    .lineLimit(1)
+                    .truncationMode(.middle)
                 if session.isDirty {
-                    Text("• Modified")
-                        .font(.caption)
+                    Label("Modified", systemImage: "circle.fill")
+                        .font(.caption2)
                         .foregroundStyle(.orange)
+                        .labelStyle(.titleAndIcon)
+                        .symbolRenderingMode(.hierarchical)
+                        .accessibilityLabel("Unsaved changes")
                 }
                 Spacer()
                 Text(entry.path)
                     .font(.caption.monospaced())
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.tertiary)
                     .lineLimit(1)
                     .truncationMode(.middle)
+                    .accessibilityHidden(true)
             }
-            HStack(spacing: 12) {
+            HStack(spacing: RookerySpacing.md) {
                 viewModeToggle(for: entry)
                 Spacer()
                 saveStatusLabel
                 if entry.previewableKind.isEditableText && session.bufferState.isText {
-                    Button("Discard") { session.discardChanges() }
-                        .disabled(!session.isDirty || session.saveStatus == .saving)
+                    Button("Discard") {
+                        session.discardChanges()
+                    }
+                    .rookeryGlassButton()
+                    .disabled(!session.isDirty || session.saveStatus == .saving)
+                    .help("Revert to the version on disk")
+
                     Button {
                         Task { await session.save() }
                     } label: {
                         Label("Save", systemImage: "square.and.arrow.down")
                     }
+                    .rookeryGlassButtonProminent()
                     .keyboardShortcut("s", modifiers: .command)
                     .disabled(!session.canSave)
+                    .help("Save changes (⌘S)")
                 }
             }
             .font(.caption)
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
+        .padding(.horizontal, RookerySpacing.lg)
+        .padding(.vertical, RookerySpacing.md)
     }
 
     @ViewBuilder

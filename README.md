@@ -6,7 +6,7 @@
 
 Local-first, with optional SSH for remote agents on Linux servers. Cross-vendor (Claude Code, Aider, OpenCode, OpenClaude, Continue, Cline). It's a **state inspector**, not a chat surface, not an SSH terminal, not an agent runner.
 
-**Status:** v0.6.0 — feature-complete for the inspector + cron use cases.
+**Status:** v0.7.0 — feature-complete + UI repolish (Liquid Glass on macOS 26+).
 
 - SSH + local browsing, per-host workspaces, auto-connect, sleep/wake reconnect, **auto-refresh polling toggle**.
 - Markdown render (MarkdownUI), **JSON: Graph (collapsible + edit-in-place) / Pretty / Source**, XML pretty-print, image + PDF preview.
